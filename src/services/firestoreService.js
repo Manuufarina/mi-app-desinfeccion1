@@ -1,0 +1,162 @@
+import {
+    collection,
+    addDoc,
+    query,
+    where,
+    getDocs,
+    doc,
+    updateDoc,
+    getDoc,
+    Timestamp,
+    onSnapshot,
+    setDoc
+} from 'firebase/firestore';
+import {
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL
+} from "firebase/storage";
+import { db, storage } from './firebase'; // Import db and storage from your firebase.js
+import { VALOR_METRO_CUBICO_DEFAULT } from '../theme'; // Import constant
+
+// Note: appId will need to be passed to functions or imported if centralized.
+// For now, functions that need it will accept it as a parameter.
+
+export const uploadFileToStorage = async (file, path) => {
+    if (!file) return null;
+    const fileRef = storageRef(storage, path);
+    await uploadBytes(fileRef, file);
+    return await getDownloadURL(fileRef);
+};
+
+export const handleUpdateValorMetroCubico = async (configCollectionPath, configDocId, nuevoValor) => {
+    const valorNumerico = parseFloat(nuevoValor);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+        throw new Error("El valor por m³ debe ser un número positivo.");
+    }
+
+    const ref = configDocId ? doc(db, configCollectionPath, configDocId) : doc(collection(db, configCollectionPath));
+    await setDoc(ref, { clave: "valorMetroCubico", valor: valorNumerico }, { merge: !configDocId });
+    return { updatedValor: valorNumerico, newConfigDocId: ref.id };
+};
+
+export const fetchInitialConfig = (configCollectionPath, callback) => { // VALOR_METRO_CUBICO_DEFAULT is imported now
+    const configRef = collection(db, configCollectionPath);
+    const q = query(configRef, where("clave", "==", "valorMetroCubico"));
+
+    return onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            const configData = snapshot.docs[0].data();
+            callback({
+                valor: parseFloat(configData.valor) || VALOR_METRO_CUBICO_DEFAULT, // Use imported constant
+                docId: snapshot.docs[0].id
+            });
+        } else {
+            const defaultConfigRef = doc(configRef);
+            setDoc(defaultConfigRef, { clave: "valorMetroCubico", valor: VALOR_METRO_CUBICO_DEFAULT }) // Use imported constant
+                .then(() => callback({ valor: VALOR_METRO_CUBICO_DEFAULT, docId: defaultConfigRef.id })) // Use imported constant
+                .catch(err => {
+                    console.error("Error creating default config: ", err);
+                    callback({ error: "Error creando configuración por defecto." });
+                });
+        }
+    }, (error) => {
+        console.error("Error loading configuration: ", error);
+        callback({ error: "Error al cargar configuración de precios." });
+    });
+};
+
+export const fetchAllVehicles = (vehiclesCollectionPath, callback) => {
+    const q = query(collection(db, vehiclesCollectionPath));
+    return onSnapshot(q, (snap) => {
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback({ data });
+    }, (error) => {
+        console.error("Vehicle Fetch Error: ", error);
+        callback({ error: "Error al cargar vehículos." });
+    });
+};
+
+export const handleRegisterVehicle = async (vehiclesCollectionPath, vehicleData, currentUserUid) => {
+    const q = query(collection(db, vehiclesCollectionPath), where("patente", "==", vehicleData.patente.toUpperCase()));
+    if (!(await getDocs(q)).empty) {
+        throw new Error("Patente ya registrada.");
+    }
+
+    const m3Num = parseFloat(vehicleData.metrosCubicos);
+    if (isNaN(m3Num) || m3Num <= 0) {
+        throw new Error("Metros cúbicos inválidos.");
+    }
+
+    const dataToSave = {
+        ...vehicleData,
+        patente: vehicleData.patente.toUpperCase(),
+        metrosCubicos: m3Num,
+        fechaCreacion: Timestamp.now(),
+        historialDesinfecciones: [],
+        createdBy: currentUserUid
+    };
+    const docRef = await addDoc(collection(db, vehiclesCollectionPath), dataToSave);
+    return { id: docRef.id, ...dataToSave };
+};
+
+// handleSearchVehicle is a local filter, so it might stay in App.js or be moved if it involves backend search later.
+// For now, assuming it's a local filter based on allVehiclesForDashboard, it doesn't need to be in firestoreService.js
+// If it were to query Firestore directly, it would be here.
+
+export const handleSelectVehicleForDetail = async (vehiclesCollectionPath, vehicleId) => {
+    const docSnap = await getDoc(doc(db, vehiclesCollectionPath, vehicleId));
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+    } else {
+        throw new Error("Vehículo no encontrado.");
+    }
+};
+
+export const handleAddDisinfection = async (vehiclesCollectionPath, vehicleId, disinfectionData, reciboFile, transaccionFile, currentUserUid, appId) => {
+    const vehicleRef = doc(db, vehiclesCollectionPath, vehicleId);
+    const vehicleSnap = await getDoc(vehicleRef);
+
+    if (!vehicleSnap.exists()) {
+        throw new Error("Vehículo no encontrado.");
+    }
+
+    const vehicle = vehicleSnap.data();
+
+    const timestamp = Date.now();
+    // Path for storage now needs appId if it's part of the path structure
+    const reciboPath = reciboFile ? `recibos/${appId}/${vehicleId}/${timestamp}_${reciboFile.name}` : null;
+    const transaccionPath = transaccionFile ? `transacciones/${appId}/${vehicleId}/${timestamp}_${transaccionFile.name}` : null;
+
+    const reciboUrl = reciboFile ? await uploadFileToStorage(reciboFile, reciboPath) : null;
+    const transaccionUrl = transaccionFile ? await uploadFileToStorage(transaccionFile, transaccionPath) : null;
+
+    const newDisinfection = {
+        fecha: Timestamp.fromDate(new Date(disinfectionData.fechaDesinfeccion + "T00:00:00")),
+        recibo: disinfectionData.numeroReciboPago,
+        urlRecibo: reciboUrl,
+        nombreArchivoRecibo: reciboFile ? reciboFile.name : null,
+        transaccion: disinfectionData.numeroTransaccionPago,
+        urlTransaccion: transaccionUrl,
+        nombreArchivoTransaccion: transaccionFile ? transaccionFile.name : null,
+        montoPagado: parseFloat(disinfectionData.montoPagado) || 0,
+        observaciones: disinfectionData.observaciones || '',
+        registradoPor: currentUserUid,
+        fechaRegistro: Timestamp.now()
+    };
+    const updatedHistorial = [newDisinfection, ...(vehicle.historialDesinfecciones || [])].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
+
+    await updateDoc(vehicleRef, {
+        ultimaFechaDesinfeccion: newDisinfection.fecha,
+        ultimoReciboPago: newDisinfection.recibo,
+        ultimaUrlRecibo: newDisinfection.urlRecibo,
+        ultimaTransaccionPago: newDisinfection.transaccion,
+        ultimaUrlTransaccion: newDisinfection.urlTransaccion,
+        ultimoMontoPagado: newDisinfection.montoPagado,
+        ultimasObservaciones: newDisinfection.observaciones,
+        historialDesinfecciones: updatedHistorial
+    });
+
+    // Return the new state for the selected vehicle
+    return { ...vehicle, ...newDisinfection, historialDesinfecciones: updatedHistorial, id: vehicleId };
+};
