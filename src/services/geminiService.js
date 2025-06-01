@@ -1,5 +1,5 @@
 // IMPORTANTE: Reemplaza "" con tu API Key real de Gemini
-const GEMINI_API_KEY = ""; // <--- REEMPLAZA ESTO CON TU API KEY
+const GEMINI_API_KEY = "AIzaSyCftKD2YlXJmQoeFO9G9msJ_0mSy5MJiZA"; // <--- REEMPLAZA ESTO CON TU API KEY
 
 export async function callGeminiAPI(promptText) {
     if (!GEMINI_API_KEY) {
