@@ -89,8 +89,9 @@ export const handleRegisterVehicle = async (vehiclesCollectionPath, vehicleData,
     }
 
     const dataToSave = {
-        ...vehicleData,
-        patente: vehicleData.patente.toUpperCase(),
+        ...vehicleData, // Spread first to include all fields from form
+        patente: vehicleData.patente.toUpperCase(), // Then overwrite/ensure specific fields
+        propietarioEmail: vehicleData.propietarioEmail || '', // Add/ensure propietarioEmail
         metrosCubicos: m3Num,
         fechaCreacion: Timestamp.now(),
         historialDesinfecciones: [],

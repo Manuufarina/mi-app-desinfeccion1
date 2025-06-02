@@ -8,6 +8,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import PersonIcon from '@mui/icons-material/Person';
 import StraightenIcon from '@mui/icons-material/Straighten';
+import EmailIcon from '@mui/icons-material/Email';
 // import { styled } from '@mui/material/styles'; // StyledPaper is imported
 // import Paper from '@mui/material/Paper'; // StyledPaper is imported
 import { StyledPaper, TIPOS_VEHICULO, theme } from '../../theme'; // Import from theme
@@ -40,6 +41,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
         altura: initialData.altura || '',
         metrosCubicos: initialData.metrosCubicos || '0.00',
         propietarioNombre: initialData.propietarioNombre || '',
+        propietarioEmail: initialData.propietarioEmail || '',
         numeroVehiculoMunicipal: initialData.numeroVehiculoMunicipal || '',
     });
 
@@ -118,6 +120,17 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
                     <TextField margin="normal" required fullWidth id="metrosCubicos" label="Metros Cúbicos (m³)" name="metrosCubicos" type="text" value={formData.metrosCubicos} InputProps={{ readOnly: true, startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }} sx={{backgroundColor: theme.palette.grey[100]}} />
                 </MuiTooltip>
                 <TextField margin="normal" required fullWidth id="propietarioNombre" label="Nombre del Propietario" name="propietarioNombre" value={formData.propietarioNombre} onChange={handleChange} InputProps={{ startAdornment: <PersonIcon sx={{mr:1, color:'action.active'}}/> }}/>
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        id="propietarioEmail"
+                        label="Email del Propietario (Opcional)"
+                        name="propietarioEmail"
+                        type="email"
+                        value={formData.propietarioEmail}
+                        onChange={handleChange}
+                        InputProps={{ startAdornment: <EmailIcon sx={{mr:1, color:'action.active'}}/> }}
+                    />
                 <TextField margin="normal" fullWidth id="numeroVehiculoMunicipal" label="Número de Vehículo Municipal (Opcional)" name="numeroVehiculoMunicipal" value={formData.numeroVehiculoMunicipal} onChange={handleChange} InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }}/>
                 <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.2 }}>Registrar Vehículo</Button>
             </Box>
