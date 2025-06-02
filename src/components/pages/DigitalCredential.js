@@ -46,22 +46,22 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
 
         try { pdf.setFont('Plus Jakarta Sans', 'normal'); } catch (e) { pdf.setFont('helvetica', 'normal'); }
 
-        pdf.setFontSize(20); pdf.setTextColor(primaryColor); pdf.setFontType('bold');
+        pdf.setFontSize(20); pdf.setTextColor(primaryColor); pdf.setFont('helvetica', 'bold');
         pdf.text("CREDENCIAL DE DESINFECCIÓN VEHICULAR", pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
 
-        pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFontType('normal');
+        pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFont('helvetica', 'normal');
         pdf.text("Municipalidad de San Isidro - Dirección de Control de Vectores", pdf.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
 
         let yPos = 130; const lineHeight = 22; const sectionSpacing = 20; const leftMargin = 40; const valueOffset = 180;
 
         const addField = (label, value, isImportant = false) => {
-            pdf.setFontType('bold'); pdf.setTextColor(textColor); pdf.text(label, leftMargin, yPos);
-            pdf.setFontType('normal'); pdf.setTextColor(isImportant ? accentColor : lightTextColor);
+            pdf.setFont('helvetica', 'bold'); pdf.setTextColor(textColor); pdf.text(label, leftMargin, yPos);
+            pdf.setFont('helvetica', 'normal'); pdf.setTextColor(isImportant ? accentColor : lightTextColor);
             pdf.text(String(value || 'N/A'), leftMargin + valueOffset, yPos);
             yPos += lineHeight;
         };
 
-        pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
+        pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Datos del Vehículo:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(11);
 
         addField("Patente:", vehicle.patente, true);
@@ -72,7 +72,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         addField("Propietario:", vehicle.propietarioNombre);
         addField("Nº Vehículo Municipal:", vehicle.numeroVehiculoMunicipal || 'N/A');
 
-        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
+        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Última Desinfección:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(11);
 
         addField("Fecha:", formatDate(vehicle.ultimaFechaDesinfeccion), true);
@@ -83,14 +83,14 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         addField("Monto Pagado:", vehicle.ultimoMontoPagado ? `$${parseFloat(vehicle.ultimoMontoPagado).toFixed(2)}` : 'N/A');
         addField("Observaciones:", vehicle.ultimasObservaciones || 'N/A');
 
-        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
+        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Historial de Desinfecciones:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(10); pdf.setTextColor(lightTextColor);
 
         if (vehicle.historialDesinfecciones && vehicle.historialDesinfecciones.length > 0) {
             vehicle.historialDesinfecciones.forEach((item) => {
                 if (yPos > pdf.internal.pageSize.getHeight() - 90) {
                     pdf.addPage(); yPos = 40;
-                    pdf.setFontSize(14);pdf.setFontType('bold');pdf.setTextColor(primaryColor);
+                    pdf.setFontSize(14);pdf.setFont('helvetica', 'bold');pdf.setTextColor(primaryColor);
                     pdf.text("Historial (Cont.):", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2);
                     pdf.setFontSize(10);pdf.setTextColor(lightTextColor);
                 }
