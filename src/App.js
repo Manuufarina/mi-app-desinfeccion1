@@ -181,7 +181,6 @@ function App() {
                     console.error("Error from fetchAllVehiclesService:", result.error);
                 } else {
                     setAllVehiclesForDashboard(result.data);
-                    if (currentPage === 'admin' && !searchTerm) setSearchResults(result.data);
                     console.log("fetchAllVehiclesService success: vehicle count=", result.data?.length);
                 }
             } finally {
@@ -193,7 +192,24 @@ function App() {
             console.log("Unsubscribing from fetchAllVehiclesService.");
             unsubscribe();
         };
-    }, [isAuthReady, currentUser, vehiclesCollectionPath, currentPage, searchTerm, showSnackbar]); // Added showSnackbar
+    }, [isAuthReady, currentUser, vehiclesCollectionPath, showSnackbar]); // Added showSnackbar
+
+    useEffect(() => {
+        if (currentPage === 'admin') {
+            if (!searchTerm.trim()) {
+                setSearchResults(allVehiclesForDashboard);
+            } else {
+                const results = allVehiclesForDashboard.filter(v => 
+                    v.patente.toUpperCase().includes(searchTerm.trim().toUpperCase())
+                );
+                setSearchResults(results);
+                // Optional: showSnackbar if no results, but be mindful of triggering it too often here.
+                // if (results.length === 0 && searchTerm.trim()) {
+                //     showSnackbar("No se encontraron vehículos para el término actual.", "info");
+                // }
+            }
+        }
+    }, [allVehiclesForDashboard, currentPage, searchTerm, showSnackbar]); // Keep showSnackbar if used for "no results"
 
     // showSnackbar and handleCloseSnackbar are obtained from useSnackbar hook
 
