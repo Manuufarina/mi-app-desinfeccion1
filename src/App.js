@@ -275,8 +275,4 @@ function App() {
     );
 }
 
-const HomePage = ({ navigate }) => ( 
-// Removed HomePage, VehicleForm, AdminPage, VehicleDetailPage, DigitalCredential, DashboardPage components code
-// They are now in src/components/pages/
-
 export default App;
