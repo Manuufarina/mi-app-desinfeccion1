@@ -108,27 +108,37 @@ function App() {
     const [valorMetroCubico, setValorMetroCubico] = useState(VALOR_METRO_CUBICO_DEFAULT);
     const [configDocId, setConfigDocId] = useState(null);
     const [geminiLoading, setGeminiLoading] = useState(false);
+    const [configLoading, setConfigLoading] = useState(true);
 
 
     const vehiclesCollectionPath = `artifacts/${appId}/public/data/vehiculos`;
     const configCollectionPath = `artifacts/${appId}/public/data/configuracion`; 
 
     useEffect(() => {
-        // Use fetchInitialConfigService
+        setConfigLoading(true); // Set true when starting
+        console.log("Setting up fetchInitialConfigService listener.");
         const unsubscribe = fetchInitialConfigService(
             configCollectionPath,
-            // VALOR_METRO_CUBICO_DEFAULT, // This is now imported directly by the service
             (result) => {
-                if (result.error) {
-                    showSnackbar(result.error, "error"); // showSnackbar from useSnackbar
-                    console.error(result.error);
-                } else {
-                    setValorMetroCubico(result.valor);
-                    setConfigDocId(result.docId);
+                try {
+                    if (result.error) {
+                        showSnackbar(result.error, "error");
+                        console.error("Error from fetchInitialConfigService:", result.error);
+                    } else {
+                        setValorMetroCubico(result.valor);
+                        setConfigDocId(result.docId);
+                        console.log("fetchInitialConfigService success: valor=", result.valor, "docId=", result.docId);
+                    }
+                } finally {
+                    setConfigLoading(false);
+                    console.log("fetchInitialConfigService callback processed, setConfigLoading(false) called.");
                 }
             }
         );
-        return () => unsubscribe();
+        return () => {
+            console.log("Unsubscribing from fetchInitialConfigService.");
+            unsubscribe();
+        };
     }, [configCollectionPath, showSnackbar]); // Added showSnackbar to dependencies
 
     const handleUpdateValorMetroCubico = async (nuevoValor) => {
@@ -153,20 +163,36 @@ function App() {
     // useEffect for onAuthStateChanged is now in useAuth hook
     
     useEffect(() => {
-        if (!isAuthReady || !currentUser) return;
+        if (!isAuthReady || !currentUser) {
+            // If we return early, make sure 'loading' is false if this effect is not going to run.
+            // However, 'setLoading(true)' is inside this guard.
+            // If 'loading' could have been true from a previous render cycle of this same effect
+            // that was then pre-empted by isAuthReady/currentUser changing, consider setting loading false here.
+            // For now, let's assume this is fine as setLoading(true) is guarded.
+            console.log("fetchAllVehiclesService effect: Auth not ready or no user, returning.");
+            return;
+        }
         setLoading(true);
-        // Use fetchAllVehiclesService
+        console.log("Setting up fetchAllVehiclesService listener.");
         const unsubscribe = fetchAllVehiclesService(vehiclesCollectionPath, (result) => {
-            if (result.error) {
-                showSnackbar(result.error, "error"); // showSnackbar from useSnackbar
-                console.error(result.error);
-            } else {
-                setAllVehiclesForDashboard(result.data);
-                if (currentPage === 'admin' && !searchTerm) setSearchResults(result.data);
+            try {
+                if (result.error) {
+                    showSnackbar(result.error, "error");
+                    console.error("Error from fetchAllVehiclesService:", result.error);
+                } else {
+                    setAllVehiclesForDashboard(result.data);
+                    if (currentPage === 'admin' && !searchTerm) setSearchResults(result.data);
+                    console.log("fetchAllVehiclesService success: vehicle count=", result.data?.length);
+                }
+            } finally {
+                setLoading(false);
+                console.log("fetchAllVehiclesService callback processed, setLoading(false) called.");
             }
-            setLoading(false);
         });
-        return () => unsubscribe();
+        return () => {
+            console.log("Unsubscribing from fetchAllVehiclesService.");
+            unsubscribe();
+        };
     }, [isAuthReady, currentUser, vehiclesCollectionPath, currentPage, searchTerm, showSnackbar]); // Added showSnackbar
 
     // showSnackbar and handleCloseSnackbar are obtained from useSnackbar hook
@@ -255,7 +281,7 @@ function App() {
                     </Toolbar>
                 </AppBar>
                 <Container component="main" sx={{ mt: 2, mb: 2, flexGrow: 1 }}>
-                    {(loading || geminiLoading) && (
+                    {(loading || configLoading || geminiLoading) && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', my: 3, position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1500 }}>
                            <Paper elevation={4} sx={{p:2, display:'flex', alignItems:'center', borderRadius:2}}> <CircularProgress size={24} sx={{mr:1}}/> <Typography>{geminiLoading ? "Procesando con IA..." : "Cargando..."}</Typography></Paper>
                         </Box>
