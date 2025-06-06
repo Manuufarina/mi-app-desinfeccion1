@@ -7,19 +7,20 @@ import {
     onAuthStateChanged,
     signInWithCustomToken
 } from 'firebase/auth';
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    query, 
-    where, 
-    getDocs, 
-    doc, 
-    updateDoc, 
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    where,
+    getDocs,
+    doc,
+    updateDoc,
     getDoc,
     Timestamp,
     onSnapshot,
-    setDoc 
+    setDoc,
+    deleteDoc
 } from 'firebase/firestore';
 import { 
     getStorage, 
@@ -376,6 +377,21 @@ function App() {
         }
         setLoading(false);
     };
+
+    const handleDeleteVehicle = async (vehicleId) => {
+        if (!currentUser) { showSnackbar('Debe estar autenticado.', 'error'); return; }
+        if (!window.confirm('¿Eliminar este vehículo? Se eliminará todo su historial.')) return;
+        setLoading(true);
+        try {
+            await deleteDoc(doc(db, vehiclesCollectionPath, vehicleId));
+            setCurrentPage('admin');
+            showSnackbar('Vehículo eliminado.', 'success');
+        } catch (e) {
+            console.error('Delete Vehicle Error:', e);
+            showSnackbar('Error al eliminar vehículo: ' + e.message, 'error');
+        }
+        setLoading(false);
+    };
     
     const navigate = (page, vehicleData = null) => {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
@@ -408,7 +424,7 @@ function App() {
                     {currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
                     {currentPage === 'admin' && <AdminPage searchTerm={searchTerm} setSearchTerm={setSearchTerm} handleSearch={handleSearchVehicle} searchResults={searchResults} handleSelectVehicle={handleSelectVehicleForDetail} navigate={navigate} valorMetroCubico={valorMetroCubico} onUpdateValorMetroCubico={handleUpdateValorMetroCubico} />}
                     {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
-                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} onDeleteDisinfection={handleDeleteDisinfection} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}
+                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} onDeleteDisinfection={handleDeleteDisinfection} onDeleteVehicle={handleDeleteVehicle} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}
                 </Container>
                 <Box component="footer" sx={{ bgcolor: 'background.paper', p: 3, borderTop: `1px solid ${theme.palette.divider}` }}><Typography variant="body2" color="text.secondary" align="center">&copy; {new Date().getFullYear()} Municipalidad de San Isidro</Typography></Box>
@@ -611,7 +627,7 @@ const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, han
     );
 };
 
-const VehicleDetailPage = ({ vehicle, onAddDisinfection, onDeleteDisinfection, navigate, showSnackbar, onOpenPaymentPage, valorMetroCubico, setGeminiLoading }) => {
+const VehicleDetailPage = ({ vehicle, onAddDisinfection, onDeleteDisinfection, onDeleteVehicle, navigate, showSnackbar, onOpenPaymentPage, valorMetroCubico, setGeminiLoading }) => {
     const [showAddDisinfectionForm, setShowAddDisinfectionForm] = useState(false);
     const [disinfectionDate, setDisinfectionDate] = useState('');
     const [receiptNumber, setReceiptNumber] = useState('');
@@ -776,6 +792,9 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, onDeleteDisinfection, n
                 </Button>
                 <Button variant="outlined" color="info" startIcon={<AutoAwesomeIcon />} onClick={handleGenerateHistorySummary}>
                     ✨ Resumir Historial (IA)
+                </Button>
+                <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => onDeleteVehicle(vehicle.id)}>
+                    Eliminar Vehículo
                 </Button>
             </Box>
 
