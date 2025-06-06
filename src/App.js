@@ -69,6 +69,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 // Recharts
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { jsPDF } from 'jspdf';
 
 const LOGO_SAN_ISIDRO_URL = "https://www.sanisidro.gob.ar/sites/default/files/logo_san_isidro_horizontal_blanco_web_1.png"; 
 
@@ -951,13 +952,14 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
     };
 
     const createPDF = () => {
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            console.error("jsPDF no está cargado globalmente.");
-            showSnackbar("Error al generar PDF: la librería jsPDF no está disponible.", "error");
+        let pdf;
+        try {
+            pdf = new jsPDF('p', 'pt', 'a4');
+        } catch (e) {
+            console.error('jsPDF error:', e);
+            showSnackbar('Error al generar PDF.', 'error');
             return null;
         }
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'pt', 'a4');
         
         const primaryColor = theme.palette.primary.dark; 
         const textColor = '#333333';
