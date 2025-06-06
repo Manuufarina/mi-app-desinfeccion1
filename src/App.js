@@ -1,5 +1,6 @@
 /* global __firebase_config, __app_id, __initial_auth_token */
 import React, { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { initializeApp } from 'firebase/app';
 import { 
     getAuth, 
@@ -561,8 +562,10 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
     );
 };
 
-const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, handleSelectVehicle, navigate, valorMetroCubico, onUpdateValorMetroCubico }) => { 
+const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, handleSelectVehicle, navigate, valorMetroCubico, onUpdateValorMetroCubico }) => {
     const [nuevoValorM3, setNuevoValorM3] = useState(valorMetroCubico);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
         setNuevoValorM3(valorMetroCubico); 
@@ -574,6 +577,40 @@ const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, han
 
     const handleSaveValorM3 = () => {
         onUpdateValorMetroCubico(nuevoValorM3);
+    };
+
+    const handleExportExcel = () => {
+        if (!startDate || !endDate) {
+            alert('Seleccione rango de fechas');
+            return;
+        }
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const rows = [];
+        searchResults.forEach(v => {
+            (v.historialDesinfecciones || []).forEach(d => {
+                const fecha = d.fecha && typeof d.fecha.toDate === 'function' ? d.fecha.toDate() : null;
+                if (fecha && fecha >= start && fecha <= end) {
+                    rows.push({
+                        Patente: v.patente,
+                        Propietario: v.propietarioNombre,
+                        Fecha: fecha.toLocaleDateString('es-AR'),
+                        Monto: d.montoPagado || '',
+                        Recibo: d.recibo || '',
+                        Transaccion: d.transaccion || '',
+                        Tipo: v.tipoVehiculo || ''
+                    });
+                }
+            });
+        });
+        if (rows.length === 0) {
+            alert('No se encontraron desinfecciones en ese rango');
+            return;
+        }
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Desinfecciones');
+        XLSX.writeFile(wb, `desinfecciones_${startDate}_al_${endDate}.xlsx`);
     };
     
     return (
@@ -611,6 +648,11 @@ const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, han
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <TextField fullWidth variant="outlined" label="Buscar por Patente (Ej: AA123BB)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.toUpperCase())} sx={{ mr: 1 }} inputProps={{ style: { textTransform: 'uppercase' } }}/>
                 <Button variant="contained" onClick={handleSearch} startIcon={<SearchIcon />} sx={{height: '56px'}}>Buscar</Button>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap:2, mb:3, flexWrap:'wrap' }}>
+                <TextField type="date" label="Desde" InputLabelProps={{ shrink: true }} value={startDate} onChange={(e)=>setStartDate(e.target.value)} />
+                <TextField type="date" label="Hasta" InputLabelProps={{ shrink: true }} value={endDate} onChange={(e)=>setEndDate(e.target.value)} />
+                <Button variant="outlined" onClick={handleExportExcel} startIcon={<DownloadIcon />}>Exportar Excel</Button>
             </Box>
             {searchResults.length > 0 ? (
                 <List>
