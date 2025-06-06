@@ -68,3 +68,14 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Servidor de correo
+
+Para poder enviar credenciales por mail se incluye un pequeño servidor Express.
+Configure las variables de entorno `GMAIL_USER` y `GMAIL_PASS` con las credenciales de su cuenta de Gmail (se recomienda una contraseña de aplicación) y ejecute:
+
+```bash
+npm run server
+```
+
+El cliente realiza peticiones a `http://localhost:4000/send-credential` para enviar la credencial en formato PDF.

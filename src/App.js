@@ -50,7 +50,8 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser'; 
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'; 
 import ReceiptIcon from '@mui/icons-material/Receipt'; 
-import PersonIcon from '@mui/icons-material/Person'; 
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -60,8 +61,9 @@ import PriceChangeIcon from '@mui/icons-material/PriceChange';
 import CloseIcon from '@mui/icons-material/Close';
 import ArticleIcon from '@mui/icons-material/Article'; 
 import StraightenIcon from '@mui/icons-material/Straighten'; 
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'; 
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'; // Para carga de archivos
+import DeleteIcon from '@mui/icons-material/Delete';
 
 // Recharts
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -341,6 +343,39 @@ function App() {
         }
         setLoading(false);
     };
+
+    const handleDeleteDisinfection = async (vehicleId, index) => {
+        if (!currentUser) { showSnackbar('Debe estar autenticado.', 'error'); return; }
+        if (!window.confirm('¿Eliminar esta desinfección?')) return;
+        setLoading(true);
+        try {
+            const vehicleRef = doc(db, vehiclesCollectionPath, vehicleId);
+            const snap = await getDoc(vehicleRef);
+            if (snap.exists()) {
+                const vehicle = snap.data();
+                const historial = [...(vehicle.historialDesinfecciones || [])];
+                historial.splice(index, 1);
+                historial.sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
+                const last = historial[0] || null;
+                await updateDoc(vehicleRef, {
+                    historialDesinfecciones: historial,
+                    ultimaFechaDesinfeccion: last ? last.fecha : null,
+                    ultimoReciboPago: last ? last.recibo : null,
+                    ultimaUrlRecibo: last ? last.urlRecibo : null,
+                    ultimaTransaccionPago: last ? last.transaccion : null,
+                    ultimaUrlTransaccion: last ? last.urlTransaccion : null,
+                    ultimoMontoPagado: last ? last.montoPagado : null,
+                    ultimasObservaciones: last ? last.observaciones : null
+                });
+                setSelectedVehicleForApp(prev => ({ ...prev, ...snap.data(), historialDesinfecciones: historial, ultimaFechaDesinfeccion: last ? last.fecha : null, ultimoReciboPago: last ? last.recibo : null, ultimaUrlRecibo: last ? last.urlRecibo : null, ultimaTransaccionPago: last ? last.transaccion : null, ultimaUrlTransaccion: last ? last.urlTransaccion : null, ultimoMontoPagado: last ? last.montoPagado : null, ultimasObservaciones: last ? last.observaciones : null }));
+                showSnackbar('Desinfección eliminada.', 'success');
+            } else showSnackbar('Vehículo no encontrado.', 'error');
+        } catch (e) {
+            console.error('Delete Disinfection Error:', e);
+            showSnackbar('Error al eliminar desinfección: ' + e.message, 'error');
+        }
+        setLoading(false);
+    };
     
     const navigate = (page, vehicleData = null) => {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
@@ -373,7 +408,7 @@ function App() {
                     {currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
                     {currentPage === 'admin' && <AdminPage searchTerm={searchTerm} setSearchTerm={setSearchTerm} handleSearch={handleSearchVehicle} searchResults={searchResults} handleSelectVehicle={handleSelectVehicleForDetail} navigate={navigate} valorMetroCubico={valorMetroCubico} onUpdateValorMetroCubico={handleUpdateValorMetroCubico} />}
                     {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
-                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}
+                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} onDeleteDisinfection={handleDeleteDisinfection} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}
                 </Container>
                 <Box component="footer" sx={{ bgcolor: 'background.paper', p: 3, borderTop: `1px solid ${theme.palette.divider}` }}><Typography variant="body2" color="text.secondary" align="center">&copy; {new Date().getFullYear()} Municipalidad de San Isidro</Typography></Box>
@@ -423,6 +458,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
         altura: initialData.altura || '', 
         metrosCubicos: initialData.metrosCubicos || '0.00', 
         propietarioNombre: initialData.propietarioNombre || '',
+        emailPropietario: initialData.emailPropietario || '',
         numeroVehiculoMunicipal: initialData.numeroVehiculoMunicipal || '',
     });
 
@@ -457,8 +493,8 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
     const handleSubmit = (e) => {
         e.preventDefault();
         const m3Calculados = parseFloat(formData.metrosCubicos);
-        if (!formData.patente || !formData.marca || !formData.tipoVehiculo || !formData.propietarioNombre || 
-            !formData.largo || !formData.ancho || !formData.altura ) {
+        if (!formData.patente || !formData.marca || !formData.tipoVehiculo || !formData.propietarioNombre ||
+            !formData.emailPropietario || !formData.largo || !formData.ancho || !formData.altura ) {
             showSnackbar("Todos los campos marcados con * son obligatorios (incluyendo dimensiones).", "error");
             return;
         }
@@ -501,6 +537,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
                     <TextField margin="normal" required fullWidth id="metrosCubicos" label="Metros Cúbicos (m³)" name="metrosCubicos" type="text" value={formData.metrosCubicos} InputProps={{ readOnly: true, startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }} sx={{backgroundColor: theme.palette.grey[100]}} />
                 </MuiTooltip>
                 <TextField margin="normal" required fullWidth id="propietarioNombre" label="Nombre del Propietario" name="propietarioNombre" value={formData.propietarioNombre} onChange={handleChange} InputProps={{ startAdornment: <PersonIcon sx={{mr:1, color:'action.active'}}/> }}/>
+                <TextField margin="normal" required fullWidth id="emailPropietario" label="Email del Propietario" name="emailPropietario" type="email" value={formData.emailPropietario} onChange={handleChange} InputProps={{ startAdornment: <EmailIcon sx={{mr:1, color:'action.active'}}/> }}/>
                 <TextField margin="normal" fullWidth id="numeroVehiculoMunicipal" label="Número de Vehículo Municipal (Opcional)" name="numeroVehiculoMunicipal" value={formData.numeroVehiculoMunicipal} onChange={handleChange} InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }}/>
                 <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.2 }}>Registrar Vehículo</Button>
             </Box>
@@ -574,7 +611,7 @@ const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, han
     );
 };
 
-const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar, onOpenPaymentPage, valorMetroCubico, setGeminiLoading }) => {
+const VehicleDetailPage = ({ vehicle, onAddDisinfection, onDeleteDisinfection, navigate, showSnackbar, onOpenPaymentPage, valorMetroCubico, setGeminiLoading }) => {
     const [showAddDisinfectionForm, setShowAddDisinfectionForm] = useState(false);
     const [disinfectionDate, setDisinfectionDate] = useState('');
     const [receiptNumber, setReceiptNumber] = useState('');
@@ -717,6 +754,7 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                 <Typography><strong>Dimensiones:</strong> L: {vehicle.largo || 'N/A'}m, An: {vehicle.ancho || 'N/A'}m, Al: {vehicle.altura || 'N/A'}m</Typography>
                 <Typography><strong>Metros Cúbicos:</strong> {parseFloat(vehicle.metrosCubicos).toFixed(2) || 'N/A'} m³</Typography>
                 <Typography><strong>Propietario:</strong> {vehicle.propietarioNombre}</Typography>
+                <Typography><strong>Email:</strong> {vehicle.emailPropietario || 'N/A'}</Typography>
                 <Typography><strong>Nº Vehículo Municipal:</strong> {vehicle.numeroVehiculoMunicipal || 'N/A'}</Typography>
                 <Divider sx={{my:1}}/>
                 <Typography><strong>Última Desinfección:</strong> <span style={{ fontWeight: 'bold', color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
@@ -790,9 +828,13 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                 <Paper elevation={0} sx={{maxHeight: 220, overflow: 'auto', backgroundColor: theme.palette.grey[100], borderRadius:1.5, p:1}}>
                     <List dense >
                         {vehicle.historialDesinfecciones.map((item, index) => (
-                            <ListItem key={index} divider sx={{py: 0.5}}>
-                                <ListItemText 
-                                    primary={`Fecha: ${formatDate(item.fecha)}`} 
+                            <ListItem key={index} divider sx={{py: 0.5}} secondaryAction={
+                                <IconButton edge="end" color="error" onClick={() => onDeleteDisinfection(vehicle.id, index)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            }>
+                                <ListItemText
+                                    primary={`Fecha: ${formatDate(item.fecha)}`}
                                     secondary={
                                         <>
                                         Recibo: {item.recibo} {item.urlRecibo && <Button size="small" sx={{ml:1,p:0.2}} href={item.urlRecibo} target="_blank">Ver</Button>} | 
@@ -847,11 +889,11 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         return timestamp.toDate().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
-    const generatePDF = async () => {
+    const createPDF = () => {
         if (!window.jspdf || !window.jspdf.jsPDF) {
             console.error("jsPDF no está cargado globalmente.");
             showSnackbar("Error al generar PDF: la librería jsPDF no está disponible.", "error");
-            return;
+            return null;
         }
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'pt', 'a4');
@@ -887,6 +929,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         addField("Dimensiones:", `L:${vehicle.largo || 'N/A'} An:${vehicle.ancho || 'N/A'} Al:${vehicle.altura || 'N/A'} (m)`);
         addField("Metros Cúbicos:", `${parseFloat(vehicle.metrosCubicos).toFixed(2) || 'N/A'} m³`);
         addField("Propietario:", vehicle.propietarioNombre);
+        addField("Email:", vehicle.emailPropietario || 'N/A');
         addField("Nº Vehículo Municipal:", vehicle.numeroVehiculoMunicipal || 'N/A');
         
         yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
@@ -929,7 +972,38 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         pdf.text(`Generada: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`, leftMargin, yPos);
         pdf.text(`ID Vehículo: ${vehicle.id}`, leftMargin, yPos + (lineHeight-10));
 
-        pdf.save(`credencial_${vehicle.patente}.pdf`);
+        return pdf;
+    };
+
+    const generatePDF = async () => {
+        const pdf = createPDF();
+        if (pdf) pdf.save(`credencial_${vehicle.patente}.pdf`);
+    };
+
+    const getPDFBase64 = async () => {
+        const pdf = createPDF();
+        return pdf ? pdf.output('datauristring').split(',')[1] : null;
+    };
+
+    const handleSendEmail = async () => {
+        try {
+            const base64 = await getPDFBase64();
+            if (!base64) return;
+            const resp = await fetch('http://localhost:4000/send-credential', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: vehicle.emailPropietario,
+                    subject: `Credencial Vehículo ${vehicle.patente}`,
+                    pdfBase64: base64
+                })
+            });
+            if (!resp.ok) throw new Error('Error HTTP');
+            showSnackbar('Credencial enviada por email.', 'success');
+        } catch (e) {
+            console.error('Send email error:', e);
+            showSnackbar('Error al enviar email: ' + e.message, 'error');
+        }
     };
 
     return (
@@ -955,6 +1029,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
                         <Grid item xs={12} sm={6}><Typography><strong>Dimensiones:</strong> L: {vehicle.largo || 'N/A'}m, An: {vehicle.ancho || 'N/A'}m, Al: {vehicle.altura || 'N/A'}m</Typography></Grid>
                         <Grid item xs={12} sm={6}><Typography><strong>Metros Cúbicos:</strong> {parseFloat(vehicle.metrosCubicos).toFixed(2) || 'N/A'} m³</Typography></Grid>
                         <Grid item xs={12} sm={6}><Typography><strong>Propietario:</strong> {vehicle.propietarioNombre}</Typography></Grid>
+                        <Grid item xs={12} sm={6}><Typography><strong>Email:</strong> {vehicle.emailPropietario || 'N/A'}</Typography></Grid>
                         <Grid item xs={12}><Typography><strong>Nº Vehículo Municipal:</strong> {vehicle.numeroVehiculoMunicipal || 'N/A'}</Typography></Grid>
                     </Grid>
                 </AccordionDetails>
@@ -1006,6 +1081,9 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
             </Typography>
             <Button fullWidth variant="contained" color="error" startIcon={<DownloadIcon />} onClick={generatePDF} sx={{ mt: 3, py: 1.2 }}>
                 Descargar Credencial en PDF
+            </Button>
+            <Button fullWidth variant="contained" color="primary" startIcon={<EmailIcon />} onClick={handleSendEmail} sx={{ mt: 2, py: 1.2 }}>
+                Enviar por Email
             </Button>
         </StyledPaper>
     );
