@@ -101,6 +101,17 @@ export const handleRegisterVehicle = async (vehiclesCollectionPath, vehicleData,
     return { id: docRef.id, ...dataToSave };
 };
 
+export const handleUpdateVehicle = async (vehiclesCollectionPath, vehicleId, updatedData) => {
+    const vehicleRef = doc(db, vehiclesCollectionPath, vehicleId);
+    await updateDoc(vehicleRef, {
+        ...updatedData,
+        patente: updatedData.patente.toUpperCase(),
+        metrosCubicos: parseFloat(updatedData.metrosCubicos) || 0
+    });
+    const snap = await getDoc(vehicleRef);
+    return { id: snap.id, ...snap.data() };
+};
+
 // handleSearchVehicle is a local filter, so it might stay in App.js or be moved if it involves backend search later.
 // For now, assuming it's a local filter based on allVehiclesForDashboard, it doesn't need to be in firestoreService.js
 // If it were to query Firestore directly, it would be here.

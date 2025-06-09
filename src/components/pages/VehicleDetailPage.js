@@ -7,6 +7,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddCircleIcon from '@mui/icons-material/AddCircleOutline';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PrintIcon from '@mui/icons-material/Print';
+import SettingsIcon from '@mui/icons-material/Settings';
 import ArticleIcon from '@mui/icons-material/Article';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -183,8 +184,11 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                 <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
                     Generar Boleta de Pago
                 </Button>
-                 <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => navigate('credential', vehicle)}>
+                <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => navigate('credential', vehicle)}>
                     Ver Credencial
+                </Button>
+                <Button variant="outlined" color="warning" startIcon={<SettingsIcon />} onClick={() => navigate('editVehicle', vehicle)}>
+                    Editar Vehículo
                 </Button>
                 <Button variant="outlined" color="info" startIcon={<AutoAwesomeIcon />} onClick={handleGenerateHistorySummary}>
                     ✨ Resumir Historial (IA)
@@ -204,7 +208,7 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                         <Grid item xs={12} sm={4}>
                             <Button variant="outlined" component="label" fullWidth startIcon={<CloudUploadIcon />} sx={{mt: {xs:0, sm:1}}}>
                                 Foto Recibo
-                                <input type="file" hidden accept="image/*" onChange={(e) => handleFileChange(e, setReciboFile)} />
+                                <input type="file" hidden accept="image/*" capture="environment" onChange={(e) => handleFileChange(e, setReciboFile)} />
                             </Button>
                             {reciboFile && <Typography variant="caption" display="block" sx={{mt:0.5, textAlign:'center'}}>{reciboFile.name}</Typography>}
                         </Grid>
@@ -217,7 +221,7 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                         <Grid item xs={12} sm={4}>
                              <Button variant="outlined" component="label" fullWidth startIcon={<CloudUploadIcon />} sx={{mt: {xs:0, sm:1}}}>
                                 Foto Trans.
-                                <input type="file" hidden accept="image/*" onChange={(e) => handleFileChange(e, setTransaccionFile)} />
+                                <input type="file" hidden accept="image/*" capture="environment" onChange={(e) => handleFileChange(e, setTransaccionFile)} />
                             </Button>
                             {transaccionFile && <Typography variant="caption" display="block" sx={{mt:0.5, textAlign:'center'}}>{transaccionFile.name}</Typography>}
                         </Grid>
