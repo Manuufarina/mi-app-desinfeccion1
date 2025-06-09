@@ -15,7 +15,8 @@ import {
     fetchAllVehicles as fetchAllVehiclesService,
     handleRegisterVehicle as registerVehicleService,
     handleSelectVehicleForDetail as selectVehicleForDetailService,
-    handleAddDisinfection as addDisinfectionService
+    handleAddDisinfection as addDisinfectionService,
+    handleUpdateVehicle as updateVehicleService
     // uploadFileToStorage is used by addDisinfectionService, not directly here
 } from './services/firestoreService';
 
@@ -283,6 +284,21 @@ function App() {
         }
         setLoading(false);
     };
+
+    const handleUpdateVehicle = async (vehicleId, data) => {
+        if (!currentUser) { showSnackbar("Debe estar autenticado.", "error"); return; }
+        setLoading(true);
+        try {
+            const updated = await updateVehicleService(vehiclesCollectionPath, vehicleId, data);
+            setSelectedVehicleForApp(updated);
+            showSnackbar("Vehículo actualizado.", "success");
+            setCurrentPage('vehicleDetail');
+        } catch (e) {
+            console.error("Update Vehicle Error: ", e);
+            showSnackbar(e.message || "Error al actualizar vehículo.", "error");
+        }
+        setLoading(false);
+    };
     
     const navigate = (page, vehicleData = null) => {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
@@ -331,6 +347,15 @@ function App() {
                     )}
                     {currentPage === 'home' && <HomePage navigate={navigate} />}
                     {currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
+                    {currentPage === 'editVehicle' && selectedVehicleForApp && (
+                        <VehicleForm
+                            onSubmit={(data) => handleUpdateVehicle(selectedVehicleForApp.id, data)}
+                            navigate={navigate}
+                            showSnackbar={showSnackbar}
+                            initialData={selectedVehicleForApp}
+                            editMode
+                        />
+                    )}
                     {currentPage === 'admin' && <AdminPage searchTerm={searchTerm} setSearchTerm={setSearchTerm} handleSearch={handleSearchVehicle} searchResults={searchResults} handleSelectVehicle={handleSelectVehicleForDetail} navigate={navigate} valorMetroCubico={valorMetroCubico} onUpdateValorMetroCubico={handleUpdateValorMetroCubico} />}
                     {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
                     {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}

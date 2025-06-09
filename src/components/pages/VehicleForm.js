@@ -31,7 +31,7 @@ import { StyledPaper, TIPOS_VEHICULO, theme } from '../../theme'; // Import from
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
 // }));
 
-const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => {
+const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editMode = false }) => {
     const [formData, setFormData] = useState({
         patente: initialData.patente || '',
         marca: initialData.marca || '',
@@ -91,8 +91,8 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
     return (
         <StyledPaper>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <IconButton onClick={() => navigate('home')}><ArrowBackIcon /></IconButton>
-                <Typography variant="h5" component="h2" sx={{ ml: 1, color: theme.palette.primary.dark }}>Registrar Vehículo</Typography>
+                <IconButton onClick={() => navigate(editMode ? 'vehicleDetail' : 'home')}><ArrowBackIcon /></IconButton>
+                <Typography variant="h5" component="h2" sx={{ ml: 1, color: theme.palette.primary.dark }}>{editMode ? 'Editar Vehículo' : 'Registrar Vehículo'}</Typography>
             </Box>
             <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
                 <TextField margin="normal" required fullWidth id="patente" label="Patente (Ej: AA123BB)" name="patente" value={formData.patente} onChange={handleChange} inputProps={{ maxLength: 10, style: { textTransform: 'uppercase' } }} InputProps={{ startAdornment: <ReceiptIcon sx={{mr:1, color:'action.active'}}/> }} />
@@ -132,7 +132,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {} }) => 
                         InputProps={{ startAdornment: <EmailIcon sx={{mr:1, color:'action.active'}}/> }}
                     />
                 <TextField margin="normal" fullWidth id="numeroVehiculoMunicipal" label="Número de Vehículo Municipal (Opcional)" name="numeroVehiculoMunicipal" value={formData.numeroVehiculoMunicipal} onChange={handleChange} InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }}/>
-                <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.2 }}>Registrar Vehículo</Button>
+                <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, py: 1.2 }}>{editMode ? 'Guardar Cambios' : 'Registrar Vehículo'}</Button>
             </Box>
         </StyledPaper>
     );
