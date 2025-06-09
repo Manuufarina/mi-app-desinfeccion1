@@ -26,9 +26,9 @@ import {
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
     Accordion, AccordionSummary, AccordionDetails, Chip as MuiChip,
     Modal, Select, MenuItem, FormControl, InputLabel, InputAdornment, Tooltip as MuiTooltip,
-    Divider 
+    Divider, Drawer, ListItemButton, useMediaQuery
 } from '@mui/material';
-import { ThemeProvider } from '@mui/material/styles'; // createTheme, styled moved to theme/index.js
+import { ThemeProvider, useTheme } from '@mui/material/styles'; // createTheme, styled moved to theme/index.js
 import CssBaseline from '@mui/material/CssBaseline';
 
 // Theme and constant imports
@@ -54,9 +54,10 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import PriceChangeIcon from '@mui/icons-material/PriceChange';
 import CloseIcon from '@mui/icons-material/Close';
 import ArticleIcon from '@mui/icons-material/Article'; 
-import StraightenIcon from '@mui/icons-material/Straighten'; 
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'; 
+import StraightenIcon from '@mui/icons-material/Straighten';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'; // Para carga de archivos
+import MenuIcon from '@mui/icons-material/Menu';
 
 // Recharts
 // import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -109,6 +110,14 @@ function App() {
     const [configDocId, setConfigDocId] = useState(null);
     const [geminiLoading, setGeminiLoading] = useState(false);
     const [configLoading, setConfigLoading] = useState(true);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
+    const muiTheme = useTheme();
+    const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
+
+    const toggleDrawer = (open) => () => {
+        setDrawerOpen(open);
+    };
 
 
     const vehiclesCollectionPath = `artifacts/${appId}/public/data/vehiculos`;
@@ -288,14 +297,32 @@ function App() {
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="static" elevation={1}>
                     <Toolbar>
+                        {isMobile && (
+                            <IconButton color="inherit" edge="start" onClick={toggleDrawer(true)} sx={{ mr: 1 }}>
+                                <MenuIcon />
+                            </IconButton>
+                        )}
                         <img src={LOGO_SAN_ISIDRO_URL} alt="Logo San Isidro" style={{height: 36, marginRight: 16, filter: 'brightness(0) invert(1)'}} onError={(e) => e.target.style.display='none'}/>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Control de Desinfección Vehicular</Typography>
-                        <Button color="inherit" onClick={() => navigate('home')} title="Inicio">Inicio</Button>
-                        <Button color="inherit" onClick={() => navigate('dashboard')} startIcon={<BarChartIcon/>}>Dashboard</Button>
-                        <Button color="inherit" onClick={() => navigate('admin')} startIcon={<SettingsIcon/>}>Admin</Button>
+                        {!isMobile && (
+                            <>
+                                <Button color="inherit" onClick={() => navigate('home')} title="Inicio">Inicio</Button>
+                                <Button color="inherit" onClick={() => navigate('dashboard')} startIcon={<BarChartIcon/>}>Dashboard</Button>
+                                <Button color="inherit" onClick={() => navigate('admin')} startIcon={<SettingsIcon/>}>Admin</Button>
+                            </>
+                        )}
                         {currentUser && <Typography variant="caption" sx={{ml:2}}>ID: {currentUser.isAnonymous ? "Anónimo" : currentUser.uid.substring(0,6)}</Typography>}
                     </Toolbar>
                 </AppBar>
+                <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
+                    <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+                        <List>
+                            <ListItemButton onClick={() => navigate('home')}><ListItemText primary="Inicio" /></ListItemButton>
+                            <ListItemButton onClick={() => navigate('dashboard')}><ListItemText primary="Dashboard" /></ListItemButton>
+                            <ListItemButton onClick={() => navigate('admin')}><ListItemText primary="Admin" /></ListItemButton>
+                        </List>
+                    </Box>
+                </Drawer>
                 <Container component="main" sx={{ mt: 2, mb: 2, flexGrow: 1 }}>
                     {(loading || configLoading || geminiLoading) && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', my: 3, position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1500 }}>
