@@ -16,7 +16,10 @@ import {
     handleRegisterVehicle as registerVehicleService,
     handleSelectVehicleForDetail as selectVehicleForDetailService,
     handleAddDisinfection as addDisinfectionService,
-    handleUpdateVehicle as updateVehicleService
+    handleUpdateVehicle as updateVehicleService,
+    handleDeleteVehicle as deleteVehicleService,
+    handleUpdateDisinfection as updateDisinfectionService,
+    handleDeleteDisinfection as deleteDisinfectionService
     // uploadFileToStorage is used by addDisinfectionService, not directly here
 } from './services/firestoreService';
 
@@ -332,6 +335,48 @@ function App() {
         }
         setLoading(false);
     };
+
+    const handleDeleteVehicle = async (vehicleId) => {
+        if (!currentUser) { showSnackbar("Debe estar autenticado.", "error"); return; }
+        setLoading(true);
+        try {
+            await deleteVehicleService(vehiclesCollectionPath, vehicleId);
+            showSnackbar("Vehículo eliminado.", "success");
+            setCurrentPage('admin');
+        } catch (e) {
+            console.error("Delete Vehicle Error: ", e);
+            showSnackbar(e.message || "Error al eliminar vehículo.", "error");
+        }
+        setLoading(false);
+    };
+
+    const handleUpdateDisinfection = async (vehicleId, fechaRegistroMillis, data) => {
+        if (!currentUser) { showSnackbar("Debe estar autenticado.", "error"); return; }
+        setLoading(true);
+        try {
+            const updated = await updateDisinfectionService(vehiclesCollectionPath, vehicleId, fechaRegistroMillis, data);
+            setSelectedVehicleForApp(updated);
+            showSnackbar("Registro actualizado.", "success");
+        } catch (e) {
+            console.error("Update Disinfection Error: ", e);
+            showSnackbar(e.message || "Error al actualizar registro.", "error");
+        }
+        setLoading(false);
+    };
+
+    const handleDeleteDisinfection = async (vehicleId, fechaRegistroMillis) => {
+        if (!currentUser) { showSnackbar("Debe estar autenticado.", "error"); return; }
+        setLoading(true);
+        try {
+            const updated = await deleteDisinfectionService(vehiclesCollectionPath, vehicleId, fechaRegistroMillis);
+            setSelectedVehicleForApp(updated);
+            showSnackbar("Registro eliminado.", "success");
+        } catch (e) {
+            console.error("Delete Disinfection Error: ", e);
+            showSnackbar(e.message || "Error al eliminar registro.", "error");
+        }
+        setLoading(false);
+    };
     
     const navigate = (page, vehicleData = null) => {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
@@ -408,7 +453,20 @@ function App() {
                         />
                     )}
                     {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
-                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}
+                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && (
+                        <VehicleDetailPage
+                            vehicle={selectedVehicleForApp}
+                            onAddDisinfection={handleAddDisinfection}
+                            onUpdateDisinfection={handleUpdateDisinfection}
+                            onDeleteDisinfection={handleDeleteDisinfection}
+                            onDeleteVehicle={handleDeleteVehicle}
+                            navigate={navigate}
+                            showSnackbar={showSnackbar}
+                            onOpenPaymentPage={() => setOpenPaymentModal(true)}
+                            valorMetroCubico={valorMetroCubico}
+                            setGeminiLoading={setGeminiLoading}
+                        />
+                    )}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}
                 </Container>
                 <Box component="footer" sx={{ bgcolor: 'background.paper', p: 3, borderTop: `1px solid ${theme.palette.divider}` }}><Typography variant="body2" color="text.secondary" align="center">&copy; {new Date().getFullYear()} Municipalidad de San Isidro</Typography></Box>
