@@ -251,6 +251,13 @@ function App() {
 
     const handleRegisterVehicle = async (vehicleData) => {
         if (!currentUser) { showSnackbar("Debe estar autenticado.", "error"); return; } // showSnackbar from useSnackbar
+
+        const plate = vehicleData.patente.toUpperCase();
+        if (allVehiclesForDashboard.some(v => v.patente.toUpperCase() === plate)) {
+            showSnackbar("Patente ya registrada.", "error");
+            return;
+        }
+
         setLoading(true);
         try {
             const newVehicle = await registerVehicleService(vehiclesCollectionPath, vehicleData, currentUser.uid);
