@@ -102,6 +102,9 @@ function App() {
     // const [isAuthReady, setIsAuthReady] = useState(false); // from useAuth
     const [selectedVehicleForApp, setSelectedVehicleForApp] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterTipoVehiculo, setFilterTipoVehiculo] = useState('');
+    const [filterDesde, setFilterDesde] = useState('');
+    const [filterHasta, setFilterHasta] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [allVehiclesForDashboard, setAllVehiclesForDashboard] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -204,22 +207,45 @@ function App() {
         };
     }, [isAuthReady, currentUser, vehiclesCollectionPath, showSnackbar]); // Added showSnackbar
 
+    const applyFilters = () => {
+        let results = allVehiclesForDashboard;
+        if (searchTerm.trim()) {
+            results = results.filter(v =>
+                v.patente.toUpperCase().includes(searchTerm.trim().toUpperCase())
+            );
+        }
+        if (filterTipoVehiculo) {
+            results = results.filter(v => v.tipoVehiculo === filterTipoVehiculo);
+        }
+        if (filterDesde) {
+            const from = new Date(filterDesde);
+            results = results.filter(v => {
+                if (!v.ultimaFechaDesinfeccion) return false;
+                const d = typeof v.ultimaFechaDesinfeccion.toDate === 'function'
+                    ? v.ultimaFechaDesinfeccion.toDate()
+                    : new Date(v.ultimaFechaDesinfeccion);
+                return d >= from;
+            });
+        }
+        if (filterHasta) {
+            const to = new Date(filterHasta);
+            to.setHours(23, 59, 59, 999);
+            results = results.filter(v => {
+                if (!v.ultimaFechaDesinfeccion) return false;
+                const d = typeof v.ultimaFechaDesinfeccion.toDate === 'function'
+                    ? v.ultimaFechaDesinfeccion.toDate()
+                    : new Date(v.ultimaFechaDesinfeccion);
+                return d <= to;
+            });
+        }
+        return results;
+    };
+
     useEffect(() => {
         if (currentPage === 'admin') {
-            if (!searchTerm.trim()) {
-                setSearchResults(allVehiclesForDashboard);
-            } else {
-                const results = allVehiclesForDashboard.filter(v => 
-                    v.patente.toUpperCase().includes(searchTerm.trim().toUpperCase())
-                );
-                setSearchResults(results);
-                // Optional: showSnackbar if no results, but be mindful of triggering it too often here.
-                // if (results.length === 0 && searchTerm.trim()) {
-                //     showSnackbar("No se encontraron vehículos para el término actual.", "info");
-                // }
-            }
+            setSearchResults(applyFilters());
         }
-    }, [allVehiclesForDashboard, currentPage, searchTerm, showSnackbar]); // Keep showSnackbar if used for "no results"
+    }, [allVehiclesForDashboard, currentPage, searchTerm, filterTipoVehiculo, filterDesde, filterHasta]);
 
     // showSnackbar and handleCloseSnackbar are obtained from useSnackbar hook
 
@@ -239,12 +265,12 @@ function App() {
     };
 
     const handleSearchVehicle = async () => {
-        if (!searchTerm.trim()) { setSearchResults(allVehiclesForDashboard); return; }
         setLoading(true);
-        // This is a local filter, so it remains in App.js
-        const results = allVehiclesForDashboard.filter(v => v.patente.toUpperCase().includes(searchTerm.trim().toUpperCase()));
+        const results = applyFilters();
         setSearchResults(results);
-        if (results.length === 0) showSnackbar("No se encontraron vehículos.", "info"); // showSnackbar from useSnackbar
+        if (results.length === 0) {
+            showSnackbar("No se encontraron vehículos.", "info");
+        }
         setLoading(false);
     };
     
@@ -356,7 +382,24 @@ function App() {
                             editMode
                         />
                     )}
-                    {currentPage === 'admin' && <AdminPage searchTerm={searchTerm} setSearchTerm={setSearchTerm} handleSearch={handleSearchVehicle} searchResults={searchResults} handleSelectVehicle={handleSelectVehicleForDetail} navigate={navigate} valorMetroCubico={valorMetroCubico} onUpdateValorMetroCubico={handleUpdateValorMetroCubico} />}
+                    {currentPage === 'admin' && (
+                        <AdminPage
+                            searchTerm={searchTerm}
+                            setSearchTerm={setSearchTerm}
+                            handleSearch={handleSearchVehicle}
+                            searchResults={searchResults}
+                            handleSelectVehicle={handleSelectVehicleForDetail}
+                            navigate={navigate}
+                            valorMetroCubico={valorMetroCubico}
+                            onUpdateValorMetroCubico={handleUpdateValorMetroCubico}
+                            filterTipoVehiculo={filterTipoVehiculo}
+                            setFilterTipoVehiculo={setFilterTipoVehiculo}
+                            filterDesde={filterDesde}
+                            setFilterDesde={setFilterDesde}
+                            filterHasta={filterHasta}
+                            setFilterHasta={setFilterHasta}
+                        />
+                    )}
                     {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
                     {currentPage === 'vehicleDetail' && selectedVehicleForApp && <VehicleDetailPage vehicle={selectedVehicleForApp} onAddDisinfection={handleAddDisinfection} navigate={navigate} showSnackbar={showSnackbar} onOpenPaymentPage={() => setOpenPaymentModal(true)} valorMetroCubico={valorMetroCubico} setGeminiLoading={setGeminiLoading} />}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}

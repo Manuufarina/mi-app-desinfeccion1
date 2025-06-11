@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
+import { 
     TextField, Button, Box, Typography, IconButton, List, ListItem, ListItemText,
-    Accordion, AccordionSummary, AccordionDetails, InputAdornment
+    Accordion, AccordionSummary, AccordionDetails, InputAdornment,
+    FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchIcon from '@mui/icons-material/Search';
@@ -10,13 +11,28 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import PriceChangeIcon from '@mui/icons-material/PriceChange';
 // import { styled } from '@mui/material/styles'; // StyledPaper is imported
 // import Paper from '@mui/material/Paper'; // StyledPaper is imported
-import { StyledPaper, theme } from '../../theme'; // Import from theme
+import { StyledPaper, theme, TIPOS_VEHICULO } from '../../theme'; // Import from theme
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
 // }));
 
-const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, handleSelectVehicle, navigate, valorMetroCubico, onUpdateValorMetroCubico }) => {
+const AdminPage = ({
+    searchTerm,
+    setSearchTerm,
+    handleSearch,
+    searchResults,
+    handleSelectVehicle,
+    navigate,
+    valorMetroCubico,
+    onUpdateValorMetroCubico,
+    filterTipoVehiculo,
+    setFilterTipoVehiculo,
+    filterDesde,
+    setFilterDesde,
+    filterHasta,
+    setFilterHasta,
+}) => {
     const [nuevoValorM3, setNuevoValorM3] = useState(valorMetroCubico);
 
     useEffect(() => {
@@ -63,9 +79,20 @@ const AdminPage = ({ searchTerm, setSearchTerm, handleSearch, searchResults, han
             </Accordion>
 
             <Typography variant="h6" gutterBottom sx={{ color: theme.palette.primary.dark }}>Buscar Vehículos</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <TextField fullWidth variant="outlined" label="Buscar por Patente (Ej: AA123BB)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.toUpperCase())} sx={{ mr: 1 }} inputProps={{ style: { textTransform: 'uppercase' } }}/>
-                <Button variant="contained" onClick={handleSearch} startIcon={<SearchIcon />} sx={{height: '56px'}}>Buscar</Button>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 3 }}>
+                <TextField variant="outlined" label="Patente" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.toUpperCase())} sx={{ flexGrow: 1, minWidth: 160 }} inputProps={{ style: { textTransform: 'uppercase' } }}/>
+                <FormControl sx={{ minWidth: 150 }}>
+                    <InputLabel id="tipo-label">Tipo</InputLabel>
+                    <Select labelId="tipo-label" label="Tipo" value={filterTipoVehiculo} onChange={(e) => setFilterTipoVehiculo(e.target.value)}>
+                        <MenuItem value="">Todos</MenuItem>
+                        {TIPOS_VEHICULO.map(tipo => (
+                            <MenuItem key={tipo} value={tipo}>{tipo}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <TextField type="date" label="Desde" value={filterDesde} onChange={(e) => setFilterDesde(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }}/>
+                <TextField type="date" label="Hasta" value={filterHasta} onChange={(e) => setFilterHasta(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }}/>
+                <Button variant="contained" onClick={handleSearch} startIcon={<SearchIcon />}>Buscar</Button>
             </Box>
             {searchResults.length > 0 ? (
                 <List>

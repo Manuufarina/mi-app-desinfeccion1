@@ -18,9 +18,13 @@ const DashboardPage = ({ vehicles }) => {
         return vehicles.reduce((acc, vehicle) => {
             const historial = vehicle.historialDesinfecciones || [];
             historial.forEach(desinf => {
-                if (desinf.fecha && typeof desinf.fecha.toDate === 'function') {
-                    const fechaDesinf = desinf.fecha.toDate();
-                    if (fechaDesinf.getMonth() === currentMonth && fechaDesinf.getFullYear() === currentYear) {
+                if (desinf.fecha) {
+                    const fechaDesinf = typeof desinf.fecha.toDate === 'function'
+                        ? desinf.fecha.toDate()
+                        : new Date(desinf.fecha);
+                    if (!isNaN(fechaDesinf) &&
+                        fechaDesinf.getMonth() === currentMonth &&
+                        fechaDesinf.getFullYear() === currentYear) {
                         acc.push({ ...desinf, tipoVehiculo: vehicle.tipoVehiculo, patente: vehicle.patente });
                     }
                 }
