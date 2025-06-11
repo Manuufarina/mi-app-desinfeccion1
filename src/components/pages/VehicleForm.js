@@ -95,7 +95,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editM
                 <Typography variant="h5" component="h2" sx={{ ml: 1, color: theme.palette.primary.dark }}>{editMode ? 'Editar Vehículo' : 'Registrar Vehículo'}</Typography>
             </Box>
             <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-                <TextField margin="normal" required fullWidth id="patente" label="Patente (Ej: AA123BB)" name="patente" value={formData.patente} onChange={handleChange} inputProps={{ maxLength: 10, style: { textTransform: 'uppercase' } }} InputProps={{ startAdornment: <ReceiptIcon sx={{mr:1, color:'action.active'}}/> }} />
+                <TextField margin="normal" required fullWidth id="patente" label="Patente (Ej: AA123BB)" name="patente" value={formData.patente} onChange={handleChange} inputProps={{ maxLength: 10, style: { textTransform: 'uppercase' } }} InputProps={{ startAdornment: <ReceiptIcon sx={{mr:1, color:'action.active'}}/> }} disabled={editMode} />
                 <TextField margin="normal" required fullWidth id="marca" label="Marca" name="marca" value={formData.marca} onChange={handleChange} InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }} />
                 <FormControl fullWidth margin="normal" required>
                     <InputLabel id="tipoVehiculo-label">Tipo de Vehículo *</InputLabel>

@@ -1,15 +1,13 @@
 import {
     collection,
-    addDoc,
+    setDoc,
     query,
     where,
-    getDocs,
     doc,
     updateDoc,
     getDoc,
     Timestamp,
-    onSnapshot,
-    setDoc
+    onSnapshot
 } from 'firebase/firestore';
 import {
     ref as storageRef,
@@ -78,8 +76,9 @@ export const fetchAllVehicles = (vehiclesCollectionPath, callback) => {
 };
 
 export const handleRegisterVehicle = async (vehiclesCollectionPath, vehicleData, currentUserUid) => {
-    const q = query(collection(db, vehiclesCollectionPath), where("patente", "==", vehicleData.patente.toUpperCase()));
-    if (!(await getDocs(q)).empty) {
+    const plateId = vehicleData.patente.toUpperCase();
+    const docRef = doc(collection(db, vehiclesCollectionPath), plateId);
+    if ((await getDoc(docRef)).exists()) {
         throw new Error("Patente ya registrada.");
     }
 
@@ -97,7 +96,7 @@ export const handleRegisterVehicle = async (vehiclesCollectionPath, vehicleData,
         historialDesinfecciones: [],
         createdBy: currentUserUid
     };
-    const docRef = await addDoc(collection(db, vehiclesCollectionPath), dataToSave);
+    await setDoc(docRef, dataToSave);
     return { id: docRef.id, ...dataToSave };
 };
 
