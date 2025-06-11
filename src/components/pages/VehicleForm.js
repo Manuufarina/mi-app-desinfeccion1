@@ -11,7 +11,7 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import EmailIcon from '@mui/icons-material/Email';
 // import { styled } from '@mui/material/styles'; // StyledPaper is imported
 // import Paper from '@mui/material/Paper'; // StyledPaper is imported
-import { StyledPaper, TIPOS_VEHICULO, theme } from '../../theme'; // Import from theme
+import { StyledPaper, TIPOS_VEHICULO, MARCAS_VEHICULO, theme } from '../../theme'; // Import from theme
 
 // Assuming theme, TIPOS_VEHICULO are passed as props or defined in a common constants file
 // For now, let's define placeholders
@@ -35,6 +35,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editM
     const [formData, setFormData] = useState({
         patente: initialData.patente || '',
         marca: initialData.marca || '',
+        nuevaMarca: '',
         tipoVehiculo: initialData.tipoVehiculo || (TIPOS_VEHICULO.length > 0 ? TIPOS_VEHICULO[0] : ''), // Use imported TIPOS_VEHICULO
         largo: initialData.largo || '',
         ancho: initialData.ancho || '',
@@ -61,7 +62,7 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editM
     const handleChange = (e) => {
         const { name, value } = e.target;
         let processedValue = value;
-        if (name === 'patente' || name === 'marca') {
+        if (name === 'patente') {
             processedValue = value.toUpperCase();
         } else if (['largo', 'ancho', 'altura'].includes(name)) {
             processedValue = value.replace(/[^0-9.]/g, '');
@@ -69,6 +70,9 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editM
             if (parts.length > 2) {
                 processedValue = parts[0] + '.' + parts.slice(1).join('');
             }
+        } else if (name === 'marca' && value !== 'Otro') {
+            // reset custom brand field if a predefined brand is chosen
+            setFormData(prev => ({ ...prev, nuevaMarca: '' }));
         }
         setFormData(prev => ({ ...prev, [name]: processedValue }));
     };
@@ -85,7 +89,15 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editM
             showSnackbar("Las dimensiones ingresadas no resultan en metros cúbicos válidos. Verifique largo, ancho y altura.", "error");
             return;
         }
-        onSubmit(formData);
+        const dataToSubmit = { ...formData };
+        if (formData.marca === 'Otro') {
+            if (!formData.nuevaMarca) {
+                showSnackbar('Por favor ingrese la marca.', 'error');
+                return;
+            }
+            dataToSubmit.marca = formData.nuevaMarca;
+        }
+        onSubmit(dataToSubmit);
     };
 
     return (
@@ -96,7 +108,35 @@ const VehicleForm = ({ onSubmit, navigate, showSnackbar, initialData = {}, editM
             </Box>
             <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
                 <TextField margin="normal" required fullWidth id="patente" label="Patente (Ej: AA123BB)" name="patente" value={formData.patente} onChange={handleChange} inputProps={{ maxLength: 10, style: { textTransform: 'uppercase' } }} InputProps={{ startAdornment: <ReceiptIcon sx={{mr:1, color:'action.active'}}/> }} disabled={editMode} />
-                <TextField margin="normal" required fullWidth id="marca" label="Marca" name="marca" value={formData.marca} onChange={handleChange} InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }} />
+                <TextField
+                    select
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="marca"
+                    label="Marca"
+                    name="marca"
+                    value={formData.marca}
+                    onChange={handleChange}
+                    InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }}
+                >
+                    {MARCAS_VEHICULO.map((marca) => (
+                        <MenuItem key={marca} value={marca}>{marca}</MenuItem>
+                    ))}
+                </TextField>
+                {formData.marca === 'Otro' && (
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="nuevaMarca"
+                        label="Ingrese la Marca"
+                        name="nuevaMarca"
+                        value={formData.nuevaMarca}
+                        onChange={handleChange}
+                        InputProps={{ startAdornment: <DirectionsCarIcon sx={{mr:1, color:'action.active'}}/> }}
+                    />
+                )}
                 <FormControl fullWidth margin="normal" required>
                     <InputLabel id="tipoVehiculo-label">Tipo de Vehículo *</InputLabel>
                     <Select labelId="tipoVehiculo-label" id="tipoVehiculo" name="tipoVehiculo" value={formData.tipoVehiculo} label="Tipo de Vehículo *" onChange={handleChange}>

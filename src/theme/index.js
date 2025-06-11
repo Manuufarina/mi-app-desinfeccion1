@@ -32,4 +32,22 @@ export const StyledPaper = styled(Paper)(({ theme }) => ({
 }));
 
 export const TIPOS_VEHICULO = ["Particular", "Remis", "Escolar", "Transporte de Carga", "Taxi", "Otro"];
+export const MARCAS_VEHICULO = [
+    "Toyota",
+    "Volkswagen",
+    "Ford",
+    "Chevrolet",
+    "Renault",
+    "Peugeot",
+    "Citroën",
+    "Fiat",
+    "Honda",
+    "Hyundai",
+    "Kia",
+    "Nissan",
+    "Mercedes-Benz",
+    "BMW",
+    "Audi",
+    "Otro"
+];
 export const VALOR_METRO_CUBICO_DEFAULT = 150;
