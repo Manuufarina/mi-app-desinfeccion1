@@ -40,7 +40,7 @@ const HomePage = ({ navigate }) => (
                 </Button>
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
-                <Button fullWidth variant="contained" color="secondary" size="large" startIcon={<SettingsIcon />} onClick={() => navigate('admin')} sx={{ py: 1.5 }}>
+                <Button type="button" fullWidth variant="contained" color="secondary" size="large" startIcon={<SettingsIcon />} onClick={() => navigate('admin')} sx={{ py: 1.5 }}>
                     Administrar
                 </Button>
             </Grid>

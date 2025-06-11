@@ -402,7 +402,7 @@ function App() {
                             <>
                                 <Button color="inherit" onClick={() => navigate('home')} title="Inicio">Inicio</Button>
                                 <Button color="inherit" onClick={() => navigate('dashboard')} startIcon={<BarChartIcon/>}>Dashboard</Button>
-                                <Button color="inherit" onClick={() => navigate('admin')} startIcon={<SettingsIcon/>}>Admin</Button>
+                                <Button type="button" color="inherit" onClick={() => navigate('admin')} startIcon={<SettingsIcon/>}>Admin</Button>
                             </>
                         )}
                         {currentUser && <Typography variant="caption" sx={{ml:2}}>ID: {currentUser.isAnonymous ? "Anónimo" : currentUser.uid.substring(0,6)}</Typography>}
