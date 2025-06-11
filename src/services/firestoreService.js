@@ -5,6 +5,7 @@ import {
     where,
     doc,
     updateDoc,
+    deleteDoc,
     getDoc,
     Timestamp,
     onSnapshot
@@ -171,3 +172,58 @@ export const handleAddDisinfection = async (vehiclesCollectionPath, vehicleId, d
     // Return the new state for the selected vehicle
     return { ...vehicle, ...newDisinfection, historialDesinfecciones: updatedHistorial, id: vehicleId };
 };
+
+export const handleDeleteVehicle = async (vehiclesCollectionPath, vehicleId) => {
+    await deleteDoc(doc(db, vehiclesCollectionPath, vehicleId));
+};
+
+export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId, fechaRegistroMillis, updatedFields) => {
+    const vehicleRef = doc(db, vehiclesCollectionPath, vehicleId);
+    const snap = await getDoc(vehicleRef);
+    if (!snap.exists()) throw new Error('Vehículo no encontrado.');
+    const vehicle = snap.data();
+    const historial = vehicle.historialDesinfecciones || [];
+    const index = historial.findIndex(d => d.fechaRegistro && d.fechaRegistro.toMillis && d.fechaRegistro.toMillis() === fechaRegistroMillis);
+    if (index === -1) throw new Error('Registro no encontrado.');
+    historial[index] = { ...historial[index], ...updatedFields };
+    const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
+    const ultima = sorted[0] || {};
+    await updateDoc(vehicleRef, {
+        historialDesinfecciones: sorted,
+        ultimaFechaDesinfeccion: ultima.fecha || null,
+        ultimoReciboPago: ultima.recibo || null,
+        ultimaUrlRecibo: ultima.urlRecibo || null,
+        ultimaTransaccionPago: ultima.transaccion || null,
+        ultimaUrlTransaccion: ultima.urlTransaccion || null,
+        ultimoMontoPagado: ultima.montoPagado || null,
+        ultimasObservaciones: ultima.observaciones || null
+    });
+    const updatedSnap = await getDoc(vehicleRef);
+    return { id: updatedSnap.id, ...updatedSnap.data() };
+};
+
+export const handleDeleteDisinfection = async (vehiclesCollectionPath, vehicleId, fechaRegistroMillis) => {
+    const vehicleRef = doc(db, vehiclesCollectionPath, vehicleId);
+    const snap = await getDoc(vehicleRef);
+    if (!snap.exists()) throw new Error('Vehículo no encontrado.');
+    const vehicle = snap.data();
+    const historial = vehicle.historialDesinfecciones || [];
+    const index = historial.findIndex(d => d.fechaRegistro && d.fechaRegistro.toMillis && d.fechaRegistro.toMillis() === fechaRegistroMillis);
+    if (index === -1) throw new Error('Registro no encontrado.');
+    historial.splice(index,1);
+    const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
+    const ultima = sorted[0] || {};
+    await updateDoc(vehicleRef, {
+        historialDesinfecciones: sorted,
+        ultimaFechaDesinfeccion: ultima.fecha || null,
+        ultimoReciboPago: ultima.recibo || null,
+        ultimaUrlRecibo: ultima.urlRecibo || null,
+        ultimaTransaccionPago: ultima.transaccion || null,
+        ultimaUrlTransaccion: ultima.urlTransaccion || null,
+        ultimoMontoPagado: ultima.montoPagado || null,
+        ultimasObservaciones: ultima.observaciones || null
+    });
+    const updatedSnap = await getDoc(vehicleRef);
+    return { id: updatedSnap.id, ...updatedSnap.data() };
+};
+

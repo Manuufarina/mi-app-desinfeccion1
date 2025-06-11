@@ -12,16 +12,30 @@ import ArticleIcon from '@mui/icons-material/Article';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is available via useTheme
+import { Timestamp } from 'firebase/firestore';
 import { callGeminiAPI } from '../../services/geminiService';
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
 // }));
 
-const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar, onOpenPaymentPage, valorMetroCubico, setGeminiLoading }) => {
+const VehicleDetailPage = ({
+    vehicle,
+    onAddDisinfection,
+    onUpdateDisinfection,
+    onDeleteDisinfection,
+    onDeleteVehicle,
+    navigate,
+    showSnackbar,
+    onOpenPaymentPage,
+    valorMetroCubico,
+    setGeminiLoading
+}) => {
     const theme = useTheme(); // MUI's useTheme hook
     const [showAddDisinfectionForm, setShowAddDisinfectionForm] = useState(false);
     const [disinfectionDate, setDisinfectionDate] = useState('');
@@ -36,6 +50,9 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
     const [disinfectionDataToSubmit, setDisinfectionDataToSubmit] = useState(null);
     const [openSummaryDialog, setOpenSummaryDialog] = useState(false);
     const [historySummary, setHistorySummary] = useState('');
+    const [editRecord, setEditRecord] = useState(null);
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(null);
+    const [openDeleteVehicleDialog, setOpenDeleteVehicleDialog] = useState(false);
 
     const montoEstimado = useMemo(() => {
         const m3 = parseFloat(vehicle.metrosCubicos);
@@ -190,6 +207,9 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                 <Button variant="outlined" color="warning" startIcon={<SettingsIcon />} onClick={() => navigate('editVehicle', vehicle)}>
                     Editar Vehículo
                 </Button>
+                <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => setOpenDeleteVehicleDialog(true)}>
+                    Eliminar Vehículo
+                </Button>
                 <Button variant="outlined" color="info" startIcon={<AutoAwesomeIcon />} onClick={handleGenerateHistorySummary}>
                     ✨ Resumir Historial (IA)
                 </Button>
@@ -244,15 +264,37 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                 <Paper elevation={0} sx={{maxHeight: 220, overflow: 'auto', backgroundColor: theme.palette.grey[100] || '#f5f5f5', borderRadius:1.5, p:1}}>
                     <List dense >
                         {vehicle.historialDesinfecciones.map((item, index) => (
-                            <ListItem key={index} divider sx={{py: 0.5}}>
+                            <ListItem
+                                key={index}
+                                divider
+                                sx={{ py: 0.5 }}
+                                secondaryAction={
+                                    <>
+                                        <IconButton edge="end" size="small" onClick={() => setEditRecord(item)}>
+                                            <EditIcon fontSize="inherit" />
+                                        </IconButton>
+                                        <IconButton edge="end" size="small" onClick={() => setOpenDeleteDialog(item.fechaRegistro.toMillis())}>
+                                            <DeleteIcon fontSize="inherit" />
+                                        </IconButton>
+                                    </>
+                                }
+                            >
                                 <ListItemText
                                     primary={`Fecha: ${formatDate(item.fecha)}`}
                                     secondary={
                                         <>
-                                        Recibo: {item.recibo} {item.urlRecibo && <Button size="small" sx={{ml:1,p:0.2}} href={item.urlRecibo} target="_blank">Ver</Button>} |
-                                        Trans.: {item.transaccion || 'N/A'} {item.urlTransaccion && <Button size="small" sx={{ml:1,p:0.2}} href={item.urlTransaccion} target="_blank">Ver</Button>} |
-                                        Monto: $${item.montoPagado ? parseFloat(item.montoPagado).toFixed(2) : 'N/A'} |
-                                        Obs: {item.observaciones || '-'}
+                                            Recibo: {item.recibo} {item.urlRecibo && (
+                                                <Button size="small" sx={{ ml: 1, p: 0.2 }} href={item.urlRecibo} target="_blank">
+                                                    Ver
+                                                </Button>
+                                            )} |
+                                            Trans.: {item.transaccion || 'N/A'} {item.urlTransaccion && (
+                                                <Button size="small" sx={{ ml: 1, p: 0.2 }} href={item.urlTransaccion} target="_blank">
+                                                    Ver
+                                                </Button>
+                                            )} |
+                                            Monto: $${item.montoPagado ? parseFloat(item.montoPagado).toFixed(2) : 'N/A'} |
+                                            Obs: {item.observaciones || '-'}
                                         </>
                                     }
                                 />
@@ -289,6 +331,48 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, navigate, showSnackbar,
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenSummaryDialog(false)}>Cerrar</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={Boolean(editRecord)} onClose={() => setEditRecord(null)}>
+                <DialogTitle>Editar Registro</DialogTitle>
+                {editRecord && (
+                    <>
+                        <DialogContent>
+                            <TextField
+                                type="date"
+                                label="Fecha"
+                                value={editRecord.fecha && new Date(editRecord.fecha.toDate ? editRecord.fecha.toDate() : editRecord.fecha).toISOString().slice(0,10)}
+                                onChange={(e) => setEditRecord({ ...editRecord, fecha: new Date(e.target.value + 'T00:00:00') })}
+                                fullWidth
+                                margin="dense"
+                                InputLabelProps={{ shrink: true }}
+                            />
+                            <TextField label="Recibo" value={editRecord.recibo} onChange={(e)=>setEditRecord({...editRecord,recibo:e.target.value})} fullWidth margin="dense" />
+                            <TextField label="Transacción" value={editRecord.transaccion || ''} onChange={(e)=>setEditRecord({...editRecord,transaccion:e.target.value})} fullWidth margin="dense" />
+                            <TextField label="Monto Pagado" type="number" value={editRecord.montoPagado} onChange={(e)=>setEditRecord({...editRecord,montoPagado:e.target.value})} fullWidth margin="dense" />
+                            <TextField label="Observaciones" value={editRecord.observaciones || ''} onChange={(e)=>setEditRecord({...editRecord,observaciones:e.target.value})} fullWidth multiline rows={3} margin="dense" />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setEditRecord(null)}>Cancelar</Button>
+                            <Button onClick={() => { onUpdateDisinfection(vehicle.id, editRecord.fechaRegistro.toMillis(), { fecha: editRecord.fecha instanceof Date ? Timestamp.fromDate(editRecord.fecha) : editRecord.fecha, recibo: editRecord.recibo, transaccion: editRecord.transaccion || '', montoPagado: parseFloat(editRecord.montoPagado) || 0, observaciones: editRecord.observaciones || '' }); setEditRecord(null); }} color="primary">Guardar</Button>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
+            <Dialog open={Boolean(openDeleteDialog)} onClose={() => setOpenDeleteDialog(null)}>
+                <DialogTitle>Eliminar Registro</DialogTitle>
+                <DialogContent><DialogContentText>¿Eliminar este registro de desinfección?</DialogContentText></DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenDeleteDialog(null)}>Cancelar</Button>
+                    <Button color="error" onClick={() => { onDeleteDisinfection(vehicle.id, openDeleteDialog); setOpenDeleteDialog(null); }}>Eliminar</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={openDeleteVehicleDialog} onClose={() => setOpenDeleteVehicleDialog(false)}>
+                <DialogTitle>Eliminar Vehículo</DialogTitle>
+                <DialogContent><DialogContentText>¿Está seguro de eliminar el vehículo {vehicle.patente} y todo su historial?</DialogContentText></DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenDeleteVehicleDialog(false)}>Cancelar</Button>
+                    <Button color="error" onClick={() => { onDeleteVehicle(vehicle.id); setOpenDeleteVehicleDialog(false); }}>Eliminar</Button>
                 </DialogActions>
             </Dialog>
         </StyledPaper>
