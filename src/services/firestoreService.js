@@ -18,6 +18,10 @@ import {
 import { db, storage } from './firebase'; // Import db and storage from your firebase.js
 import { VALOR_METRO_CUBICO_DEFAULT } from '../theme'; // Import constant
 
+// Helper to compare if two dates fall in the same calendar month
+const isSameMonthAndYear = (a, b) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+
 // Note: appId will need to be passed to functions or imported if centralized.
 // For now, functions that need it will accept it as a parameter.
 
@@ -135,6 +139,16 @@ export const handleAddDisinfection = async (vehiclesCollectionPath, vehicleId, d
 
     const vehicle = vehicleSnap.data();
 
+    // Validate no duplicate disinfection in the same month
+    const newDateObj = new Date(`${disinfectionData.fechaDesinfeccion}T00:00:00`);
+    const alreadyExists = (vehicle.historialDesinfecciones || []).some(d => {
+        const existingDate = d.fecha.toDate ? d.fecha.toDate() : new Date(d.fecha);
+        return isSameMonthAndYear(existingDate, newDateObj);
+    });
+    if (alreadyExists) {
+        throw new Error('Ya existe una desinfección registrada para este mes.');
+    }
+
     const timestamp = Date.now();
     // Path for storage now needs appId if it's part of the path structure
     const reciboPath = reciboFile ? `recibos/${appId}/${vehicleId}/${timestamp}_${reciboFile.name}` : null;
@@ -185,6 +199,19 @@ export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId
     const historial = vehicle.historialDesinfecciones || [];
     const index = historial.findIndex(d => d.fechaRegistro && d.fechaRegistro.toMillis && d.fechaRegistro.toMillis() === fechaRegistroMillis);
     if (index === -1) throw new Error('Registro no encontrado.');
+
+    // Validate no duplicate month when changing the date
+    if (updatedFields.fecha) {
+        const newDate = updatedFields.fecha.toDate ? updatedFields.fecha.toDate() : new Date(updatedFields.fecha);
+        const conflict = historial.some((d, i) => {
+            if (i === index) return false; // skip current record
+            const existing = d.fecha.toDate ? d.fecha.toDate() : new Date(d.fecha);
+            return isSameMonthAndYear(existing, newDate);
+        });
+        if (conflict) {
+            throw new Error('Ya existe una desinfección registrada para este mes.');
+        }
+    }
     historial[index] = { ...historial[index], ...updatedFields };
     const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
     const ultima = sorted[0] || {};
