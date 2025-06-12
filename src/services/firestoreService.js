@@ -135,6 +135,18 @@ export const handleAddDisinfection = async (vehiclesCollectionPath, vehicleId, d
 
     const vehicle = vehicleSnap.data();
 
+    // Validate no duplicate disinfection in the same month
+    const newDateObj = new Date(disinfectionData.fechaDesinfeccion + "T00:00:00");
+    const month = newDateObj.getMonth();
+    const year = newDateObj.getFullYear();
+    const alreadyExists = (vehicle.historialDesinfecciones || []).some(d => {
+        const existingDate = d.fecha.toDate ? d.fecha.toDate() : new Date(d.fecha);
+        return existingDate.getFullYear() === year && existingDate.getMonth() === month;
+    });
+    if (alreadyExists) {
+        throw new Error('Ya existe una desinfección registrada para este mes.');
+    }
+
     const timestamp = Date.now();
     // Path for storage now needs appId if it's part of the path structure
     const reciboPath = reciboFile ? `recibos/${appId}/${vehicleId}/${timestamp}_${reciboFile.name}` : null;
@@ -185,6 +197,21 @@ export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId
     const historial = vehicle.historialDesinfecciones || [];
     const index = historial.findIndex(d => d.fechaRegistro && d.fechaRegistro.toMillis && d.fechaRegistro.toMillis() === fechaRegistroMillis);
     if (index === -1) throw new Error('Registro no encontrado.');
+
+    // Validate no duplicate month when changing the date
+    if (updatedFields.fecha) {
+        const newDate = updatedFields.fecha.toDate ? updatedFields.fecha.toDate() : new Date(updatedFields.fecha);
+        const month = newDate.getMonth();
+        const year = newDate.getFullYear();
+        const conflict = historial.some((d, i) => {
+            if (i === index) return false; // skip current record
+            const existing = d.fecha.toDate ? d.fecha.toDate() : new Date(d.fecha);
+            return existing.getFullYear() === year && existing.getMonth() === month;
+        });
+        if (conflict) {
+            throw new Error('Ya existe una desinfección registrada para este mes.');
+        }
+    }
     historial[index] = { ...historial[index], ...updatedFields };
     const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
     const ultima = sorted[0] || {};
