@@ -40,11 +40,16 @@ const HomePage = ({ navigate }) => (
                 </Button>
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
+                <Button fullWidth variant="contained" color="primary" size="large" startIcon={<AddCircleIcon />} onClick={() => navigate('searchDisinfection')} sx={{ py: 1.5 }}>
+                    Nueva Desinfección
+                </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
                 <Button type="button" fullWidth variant="contained" color="secondary" size="large" startIcon={<SettingsIcon />} onClick={() => navigate('admin')} sx={{ py: 1.5 }}>
                     Administrar
                 </Button>
             </Grid>
-             <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={4}>
                 <Button fullWidth variant="outlined" color="primary" size="large" startIcon={<BarChartIcon />} onClick={() => navigate('dashboard')} sx={{ py: 1.5 }}>
                     Dashboard
                 </Button>

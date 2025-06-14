@@ -74,6 +74,7 @@ import AdminPage from './components/pages/AdminPage';
 import VehicleDetailPage from './components/pages/VehicleDetailPage';
 import DigitalCredential from './components/pages/DigitalCredential';
 import DashboardPage from './components/pages/DashboardPage';
+import SearchDisinfectionPage from './components/pages/SearchDisinfectionPage';
 
 // const LOGO_SAN_ISIDRO_URL = "https://www.sanisidro.gob.ar/sites/default/files/logo_san_isidro_horizontal_blanco_web_1.png"; // Moved to theme
 
@@ -118,6 +119,7 @@ function App() {
     const [geminiLoading, setGeminiLoading] = useState(false);
     const [configLoading, setConfigLoading] = useState(true);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [autoOpenAddForm, setAutoOpenAddForm] = useState(false);
 
     const muiTheme = useTheme();
     const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
@@ -284,11 +286,12 @@ function App() {
         setLoading(false);
     };
     
-    const handleSelectVehicleForDetail = async (vehicleId) => {
+    const handleSelectVehicleForDetail = async (vehicleId, openAddForm = false) => {
         setLoading(true);
         try {
             const vehicleDetails = await selectVehicleForDetailService(vehiclesCollectionPath, vehicleId);
             setSelectedVehicleForApp(vehicleDetails);
+            setAutoOpenAddForm(openAddForm);
             setCurrentPage('vehicleDetail');
         } catch (e) {
             console.error("Select Error: ", e);
@@ -380,6 +383,7 @@ function App() {
     
     const navigate = (page, vehicleData = null) => {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
+        if (page !== 'vehicleDetail') setAutoOpenAddForm(false);
         setCurrentPage(page);
     };
 
@@ -450,6 +454,14 @@ function App() {
                             setFilterDesde={setFilterDesde}
                             filterHasta={filterHasta}
                             setFilterHasta={setFilterHasta}
+                            allVehicles={allVehiclesForDashboard}
+                        />
+                    )}
+                    {currentPage === 'searchDisinfection' && (
+                        <SearchDisinfectionPage
+                            vehicles={allVehiclesForDashboard}
+                            onSelectVehicle={(id) => handleSelectVehicleForDetail(id, true)}
+                            navigate={navigate}
                         />
                     )}
                     {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
@@ -465,13 +477,23 @@ function App() {
                             onOpenPaymentPage={() => setOpenPaymentModal(true)}
                             valorMetroCubico={valorMetroCubico}
                             setGeminiLoading={setGeminiLoading}
+                            autoShowAddForm={autoOpenAddForm}
+                            onAutoShowHandled={() => setAutoOpenAddForm(false)}
                         />
                     )}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}
                 </Container>
                 <Box component="footer" sx={{ bgcolor: 'background.paper', p: 3, borderTop: `1px solid ${theme.palette.divider}` }}><Typography variant="body2" color="text.secondary" align="center">&copy; {new Date().getFullYear()} Municipalidad de San Isidro</Typography></Box>
                 <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">{snackbar.message}</Alert></Snackbar>
-                <Modal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)}><Box sx={{position: 'absolute',top: '50%',left: '50%',transform: 'translate(-50%, -50%)',width: '90%',maxWidth: '800px',height: '80vh',bgcolor: 'background.paper',border: '2px solid #000',boxShadow: 24,p: 0,display: 'flex',flexDirection: 'column',borderRadius: 2,overflow: 'hidden',}}><Box sx={{display: 'flex',justifyContent: 'space-between',alignItems: 'center',p:1.5,borderBottom: `1px solid ${theme.palette.divider}`,backgroundColor: theme.palette.primary.main,color: 'white'}}><Typography variant="h6">Generar Boleta</Typography><IconButton onClick={() => setOpenPaymentModal(false)} color="inherit" size="small"><CloseIcon /></IconButton></Box><iframe src="https://boletadepago.gestionmsi.com.ar/siste" title="Generador Boleta MSI" style={{ width: '100%', height: '100%', border: 'none', flexGrow: 1 }}/></Box></Modal>
+                <Modal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)}>
+                    <Box sx={{position: 'absolute',top: '50%',left: '50%',transform: 'translate(-50%, -50%)',width: '90%',maxWidth: '800px',height: '80vh',bgcolor: 'background.paper',border: '2px solid #000',boxShadow: 24,p: 0,display: 'flex',flexDirection: 'column',borderRadius: 2,overflow: 'hidden',}}>
+                        <Box sx={{display: 'flex',justifyContent: 'space-between',alignItems: 'center',p:1.5,borderBottom: `1px solid ${theme.palette.divider}`,backgroundColor: theme.palette.primary.main,color: 'white'}}>
+                            <Typography variant="h6">Generar Boleta</Typography>
+                            <IconButton onClick={() => setOpenPaymentModal(false)} color="inherit" size="small"><CloseIcon /></IconButton>
+                        </Box>
+                        <iframe src="https://boletadepago.gestionmsi.gob.ar/siste" title="Generador Boleta MSI" style={{ width: '100%', height: '100%', border: 'none', flexGrow: 1 }} />
+                    </Box>
+                </Modal>
             </Box>
         </ThemeProvider>
     );

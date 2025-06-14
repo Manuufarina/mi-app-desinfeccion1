@@ -34,7 +34,9 @@ const VehicleDetailPage = ({
     showSnackbar,
     onOpenPaymentPage,
     valorMetroCubico,
-    setGeminiLoading
+    setGeminiLoading,
+    autoShowAddForm = false,
+    onAutoShowHandled
 }) => {
     const theme = useTheme(); // MUI's useTheme hook
     const [showAddDisinfectionForm, setShowAddDisinfectionForm] = useState(false);
@@ -53,6 +55,13 @@ const VehicleDetailPage = ({
     const [editRecord, setEditRecord] = useState(null);
     const [openDeleteDialog, setOpenDeleteDialog] = useState(null);
     const [openDeleteVehicleDialog, setOpenDeleteVehicleDialog] = useState(false);
+
+    useEffect(() => {
+        if (autoShowAddForm) {
+            setShowAddDisinfectionForm(true);
+            if (onAutoShowHandled) onAutoShowHandled();
+        }
+    }, [autoShowAddForm, onAutoShowHandled]);
 
     const montoEstimado = useMemo(() => {
         const m3 = parseFloat(vehicle.metrosCubicos);

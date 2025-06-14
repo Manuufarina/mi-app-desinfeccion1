@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
     TextField, Button, Box, Typography, IconButton, List, ListItem, ListItemText,
     Accordion, AccordionSummary, AccordionDetails, InputAdornment,
     FormControl, InputLabel, Select, MenuItem
@@ -9,9 +9,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PriceChangeIcon from '@mui/icons-material/PriceChange';
+import DownloadIcon from '@mui/icons-material/Download';
 // import { styled } from '@mui/material/styles'; // StyledPaper is imported
 // import Paper from '@mui/material/Paper'; // StyledPaper is imported
 import { StyledPaper, theme, TIPOS_VEHICULO } from '../../theme'; // Import from theme
+import { exportDisinfectionsToExcel } from '../../services/excelExportService';
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
@@ -32,8 +34,11 @@ const AdminPage = ({
     setFilterDesde,
     filterHasta,
     setFilterHasta,
+    allVehicles,
 }) => {
     const [nuevoValorM3, setNuevoValorM3] = useState(valorMetroCubico);
+    const [exportDesde, setExportDesde] = useState('');
+    const [exportHasta, setExportHasta] = useState('');
 
     useEffect(() => {
         setNuevoValorM3(valorMetroCubico);
@@ -45,6 +50,13 @@ const AdminPage = ({
 
     const handleSaveValorM3 = () => {
         onUpdateValorMetroCubico(nuevoValorM3);
+    };
+
+    const handleExport = () => {
+        const from = exportDesde ? new Date(exportDesde) : null;
+        const to = exportHasta ? new Date(exportHasta) : null;
+        if (to) to.setHours(23,59,59,999);
+        exportDisinfectionsToExcel(allVehicles || [], from, to);
     };
 
     return (
@@ -105,6 +117,15 @@ const AdminPage = ({
             ) : (
                 <Typography sx={{ textAlign: 'center', mt: 3, fontStyle: 'italic' }} color="text.secondary">No hay vehículos para mostrar. Realice una búsqueda o registre nuevos vehículos.</Typography>
             )}
+
+            <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ color: theme.palette.primary.dark }}>Exportar Desinfecciones</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <TextField type="date" label="Desde" value={exportDesde} onChange={(e) => setExportDesde(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }}/>
+                    <TextField type="date" label="Hasta" value={exportHasta} onChange={(e) => setExportHasta(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }}/>
+                    <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExport}>Exportar</Button>
+                </Box>
+            </Box>
         </StyledPaper>
     );
 };
