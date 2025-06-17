@@ -131,6 +131,20 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         pdf.text(`Generada: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`, leftMargin, yPos);
         pdf.text(`ID Vehículo: ${vehicle.id}`, leftMargin, yPos + (lineHeight-10));
 
+        try {
+            const qrText = `${window.location.origin}?id=${vehicle.id}`;
+            const qrDataUrl = await window.QRCode.toDataURL(qrText);
+            const qrSize = 80;
+            const qrMargin = 40;
+            const qrX = pdf.internal.pageSize.getWidth() - qrMargin - qrSize;
+            const qrY = pdf.internal.pageSize.getHeight() - qrMargin - qrSize;
+            pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+            pdf.setTextColor('#333333');
+            pdf.text('Para verificar autenticidad, escanee este código QR', qrX + qrSize / 2, qrY + qrSize + 12, { align: 'center' });
+        } catch (e) {
+            console.error('Error generando QR', e);
+        }
+
         pdf.save(`credencial_${vehicle.patente}.pdf`);
     };
 
