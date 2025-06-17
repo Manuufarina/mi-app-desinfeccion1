@@ -73,6 +73,7 @@ import VehicleForm from './components/pages/VehicleForm';
 import AdminPage from './components/pages/AdminPage';
 import VehicleDetailPage from './components/pages/VehicleDetailPage';
 import DigitalCredential from './components/pages/DigitalCredential';
+import VerifyPage from './components/pages/VerifyPage';
 import DashboardPage from './components/pages/DashboardPage';
 import SearchDisinfectionPage from './components/pages/SearchDisinfectionPage';
 
@@ -105,6 +106,7 @@ function App() {
     // const [currentUser, setCurrentUser] = useState(null); // from useAuth
     // const [isAuthReady, setIsAuthReady] = useState(false); // from useAuth
     const [selectedVehicleForApp, setSelectedVehicleForApp] = useState(null);
+    const [verifyVehicleId, setVerifyVehicleId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipoVehiculo, setFilterTipoVehiculo] = useState('');
     const [filterDesde, setFilterDesde] = useState('');
@@ -130,7 +132,16 @@ function App() {
 
 
     const vehiclesCollectionPath = `artifacts/${appId}/public/data/vehiculos`;
-    const configCollectionPath = `artifacts/${appId}/public/data/configuracion`; 
+    const configCollectionPath = `artifacts/${appId}/public/data/configuracion`;
+
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path.startsWith('/verify/')) {
+            const id = decodeURIComponent(path.replace('/verify/', ''));
+            setVerifyVehicleId(id);
+            setCurrentPage('verify');
+        }
+    }, []);
 
     useEffect(() => {
         setConfigLoading(true); // Set true when starting
@@ -385,6 +396,14 @@ function App() {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
         if (page !== 'vehicleDetail') setAutoOpenAddForm(false);
         setCurrentPage(page);
+        if (page === 'verify') {
+            const id = vehicleData && vehicleData.id ? vehicleData.id : vehicleData;
+            setVerifyVehicleId(id);
+            window.history.pushState({}, '', `/verify/${id}`);
+        } else {
+            setVerifyVehicleId(null);
+            window.history.pushState({}, '', '/');
+        }
     };
 
     if (!isAuthReady) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}><CircularProgress /><Typography variant="h6" sx={{ mt: 2 }}>Cargando...</Typography></Box>;
@@ -482,6 +501,14 @@ function App() {
                         />
                     )}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}
+                    {currentPage === 'verify' && verifyVehicleId && (
+                        <VerifyPage
+                            vehicleId={verifyVehicleId}
+                            vehiclesCollectionPath={vehiclesCollectionPath}
+                            navigate={navigate}
+                            showSnackbar={showSnackbar}
+                        />
+                    )}
                 </Container>
                 <Box component="footer" sx={{ bgcolor: 'background.paper', p: 3, borderTop: `1px solid ${theme.palette.divider}` }}><Typography variant="body2" color="text.secondary" align="center">&copy; {new Date().getFullYear()} Municipalidad de San Isidro</Typography></Box>
                 <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">{snackbar.message}</Alert></Snackbar>

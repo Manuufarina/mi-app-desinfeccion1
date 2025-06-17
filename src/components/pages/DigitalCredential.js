@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Typography,
     Button,
@@ -19,13 +19,22 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper, LOGO_SAN_ISIDRO_URL, DIAS_VIGENCIA_TIPO } from '../../theme'; // Import from theme
+import QRCode from 'qrcode';
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
 // }));
 
-const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN_ISIDRO_URL is imported
+const DigitalCredential = ({ vehicle, navigate, showSnackbar, hideBackButton = false, verificationUrl }) => {
     const theme = useTheme();
+    const [qrDataUrl, setQrDataUrl] = useState('');
+    const url = verificationUrl || `${window.location.origin}/verify/${vehicle.id}`;
+
+    useEffect(() => {
+        QRCode.toDataURL(url)
+            .then(setQrDataUrl)
+            .catch(err => console.error('QR generation error', err));
+    }, [url]);
 
     const formatDate = (timestamp) => {
         if (!timestamp) return 'PENDIENTE';
@@ -53,6 +62,8 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'pt', 'a4');
 
+        const qrImage = await QRCode.toDataURL(url);
+
         const primaryColor = theme.palette.primary.dark;
         const textColor = '#333333';
         const lightTextColor = '#555555';
@@ -71,6 +82,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
 
         pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFont('helvetica', 'normal');
         pdf.text("Municipalidad de San Isidro - Dirección de Control de Vectores", pdf.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
+        pdf.addImage(qrImage, 'PNG', pdf.internal.pageSize.getWidth() - 110, 20, 90, 90);
 
         let yPos = 130; const lineHeight = 22; const sectionSpacing = 20; const leftMargin = 40; const valueOffset = 180;
 
@@ -130,6 +142,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         pdf.setFontSize(9); pdf.setTextColor("#777777");
         pdf.text(`Generada: ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}`, leftMargin, yPos);
         pdf.text(`ID Vehículo: ${vehicle.id}`, leftMargin, yPos + (lineHeight-10));
+        pdf.addImage(qrImage, 'PNG', pdf.internal.pageSize.getWidth() - 110, pdf.internal.pageSize.getHeight() - 150, 90, 90);
 
         pdf.save(`credencial_${vehicle.patente}.pdf`);
     };
@@ -137,7 +150,9 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
     return (
         <StyledPaper>
              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, mt: -1, ml: -1 }}>
-                <IconButton onClick={() => navigate(vehicle.createdBy ? 'admin' : 'home')} ><ArrowBackIcon /></IconButton>
+                {!hideBackButton && (
+                    <IconButton onClick={() => navigate(vehicle.createdBy ? 'admin' : 'home')} ><ArrowBackIcon /></IconButton>
+                )}
             </Box>
             <Box sx={{ textAlign: 'center', mb: 3, borderBottom: `2px solid ${theme.palette.primary.main}`, pb: 2 }}>
                 <img src={LOGO_SAN_ISIDRO_URL} alt="Logo San Isidro" style={{height: 50, marginBottom: theme.spacing(1)}} onError={(e) => e.target.style.display='none'}/>
@@ -212,6 +227,11 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
             <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 3, textAlign: 'center' }}>
                 ID Credencial (Vehículo): {vehicle.id}
             </Typography>
+            {qrDataUrl && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                    <img src={qrDataUrl} alt="QR de verificación" style={{ width: 120, height: 120 }} />
+                </Box>
+            )}
             <Button fullWidth variant="contained" color="error" startIcon={<DownloadIcon />} onClick={generatePDF} sx={{ mt: 3, py: 1.2 }}>
                 Descargar Credencial en PDF
             </Button>
