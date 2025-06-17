@@ -16,7 +16,7 @@ import {
     getDownloadURL
 } from "firebase/storage";
 import { db, storage } from './firebase'; // Import db and storage from your firebase.js
-import { VALOR_METRO_CUBICO_DEFAULT } from '../theme'; // Import constant
+import { VALOR_METRO_CUBICO_DEFAULT, DIAS_VIGENCIA_TIPO } from '../theme'; // Import constants
 
 // Note: appId will need to be passed to functions or imported if centralized.
 // For now, functions that need it will accept it as a parameter.
@@ -95,7 +95,8 @@ export const handleRegisterVehicle = async (vehiclesCollectionPath, vehicleData,
         metrosCubicos: m3Num,
         fechaCreacion: Timestamp.now(),
         historialDesinfecciones: [],
-        createdBy: currentUserUid
+        createdBy: currentUserUid,
+        fechaVencimiento: null
     };
     await setDoc(docRef, dataToSave);
     return { id: docRef.id, ...dataToSave };
@@ -168,6 +169,9 @@ export const handleAddDisinfection = async (vehiclesCollectionPath, vehicleId, d
         registradoPor: currentUserUid,
         fechaRegistro: Timestamp.now()
     };
+    const diasVigencia = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
+    const fechaVencimiento = new Date(newDateObj.getTime() + diasVigencia * 24 * 60 * 60 * 1000);
+    const fechaVencimientoTs = Timestamp.fromDate(fechaVencimiento);
     const updatedHistorial = [newDisinfection, ...(vehicle.historialDesinfecciones || [])].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
 
     await updateDoc(vehicleRef, {
@@ -178,7 +182,8 @@ export const handleAddDisinfection = async (vehiclesCollectionPath, vehicleId, d
         ultimaUrlTransaccion: newDisinfection.urlTransaccion,
         ultimoMontoPagado: newDisinfection.montoPagado,
         ultimasObservaciones: newDisinfection.observaciones,
-        historialDesinfecciones: updatedHistorial
+        historialDesinfecciones: updatedHistorial,
+        fechaVencimiento: fechaVencimientoTs
     });
 
     // Return the new state for the selected vehicle
@@ -215,6 +220,9 @@ export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId
     historial[index] = { ...historial[index], ...updatedFields };
     const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
     const ultima = sorted[0] || {};
+    const diasVigencia = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
+    const ultimaFecha = ultima.fecha ? (ultima.fecha.toDate ? ultima.fecha.toDate() : new Date(ultima.fecha)) : null;
+    const fechaVencimientoTs = ultimaFecha ? Timestamp.fromDate(new Date(ultimaFecha.getTime() + diasVigencia * 24 * 60 * 60 * 1000)) : null;
     await updateDoc(vehicleRef, {
         historialDesinfecciones: sorted,
         ultimaFechaDesinfeccion: ultima.fecha || null,
@@ -223,7 +231,8 @@ export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId
         ultimaTransaccionPago: ultima.transaccion || null,
         ultimaUrlTransaccion: ultima.urlTransaccion || null,
         ultimoMontoPagado: ultima.montoPagado || null,
-        ultimasObservaciones: ultima.observaciones || null
+        ultimasObservaciones: ultima.observaciones || null,
+        fechaVencimiento: fechaVencimientoTs
     });
     const updatedSnap = await getDoc(vehicleRef);
     return { id: updatedSnap.id, ...updatedSnap.data() };
@@ -240,6 +249,9 @@ export const handleDeleteDisinfection = async (vehiclesCollectionPath, vehicleId
     historial.splice(index,1);
     const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
     const ultima = sorted[0] || {};
+    const diasVigencia = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
+    const ultimaFecha = ultima.fecha ? (ultima.fecha.toDate ? ultima.fecha.toDate() : new Date(ultima.fecha)) : null;
+    const fechaVencimientoTs = ultimaFecha ? Timestamp.fromDate(new Date(ultimaFecha.getTime() + diasVigencia * 24 * 60 * 60 * 1000)) : null;
     await updateDoc(vehicleRef, {
         historialDesinfecciones: sorted,
         ultimaFechaDesinfeccion: ultima.fecha || null,
@@ -248,7 +260,8 @@ export const handleDeleteDisinfection = async (vehiclesCollectionPath, vehicleId
         ultimaTransaccionPago: ultima.transaccion || null,
         ultimaUrlTransaccion: ultima.urlTransaccion || null,
         ultimoMontoPagado: ultima.montoPagado || null,
-        ultimasObservaciones: ultima.observaciones || null
+        ultimasObservaciones: ultima.observaciones || null,
+        fechaVencimiento: fechaVencimientoTs
     });
     const updatedSnap = await getDoc(vehicleRef);
     return { id: updatedSnap.id, ...updatedSnap.data() };

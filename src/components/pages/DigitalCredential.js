@@ -18,7 +18,7 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
-import { StyledPaper, LOGO_SAN_ISIDRO_URL } from '../../theme'; // Import from theme
+import { StyledPaper, LOGO_SAN_ISIDRO_URL, DIAS_VIGENCIA_TIPO } from '../../theme'; // Import from theme
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
@@ -37,6 +37,13 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         return new Date(timestamp).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
+    const diasVigencia = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
+    const ultima = vehicle.ultimaFechaDesinfeccion ? (vehicle.ultimaFechaDesinfeccion.toDate ? vehicle.ultimaFechaDesinfeccion.toDate() : new Date(vehicle.ultimaFechaDesinfeccion)) : null;
+    const fechaVencimiento = vehicle.fechaVencimiento
+        ? (vehicle.fechaVencimiento.toDate ? vehicle.fechaVencimiento.toDate() : new Date(vehicle.fechaVencimiento))
+        : (ultima ? new Date(ultima.getTime() + diasVigencia * 24 * 60 * 60 * 1000) : null);
+    const credencialVencida = fechaVencimiento ? new Date() > fechaVencimiento : false;
+
     const generatePDF = async () => {
         if (!window.jspdf || !window.jspdf.jsPDF) {
             console.error("jsPDF no está cargado globalmente.");
@@ -51,10 +58,16 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         const lightTextColor = '#555555';
         const accentColor = theme.palette.secondary.main;
 
+        const diasVigenciaPDF = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
+        const ultimaPDF = vehicle.ultimaFechaDesinfeccion ? (vehicle.ultimaFechaDesinfeccion.toDate ? vehicle.ultimaFechaDesinfeccion.toDate() : new Date(vehicle.ultimaFechaDesinfeccion)) : null;
+        const fechaVencPDF = vehicle.fechaVencimiento ? (vehicle.fechaVencimiento.toDate ? vehicle.fechaVencimiento.toDate() : new Date(vehicle.fechaVencimiento)) : (ultimaPDF ? new Date(ultimaPDF.getTime() + diasVigenciaPDF * 24 * 60 * 60 * 1000) : null);
+        const isVencidaPDF = fechaVencPDF ? new Date() > fechaVencPDF : false;
+
         try { pdf.setFont('Plus Jakarta Sans', 'normal'); } catch (e) { pdf.setFont('helvetica', 'normal'); }
 
         pdf.setFontSize(20); pdf.setTextColor(primaryColor); pdf.setFont('helvetica', 'bold');
-        pdf.text("CREDENCIAL DE DESINFECCIÓN VEHICULAR", pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
+        const tituloPdf = isVencidaPDF ? 'CREDENCIAL DE DESINFECCIÓN VENCIDA' : 'CREDENCIAL DE DESINFECCIÓN VEHICULAR';
+        pdf.text(tituloPdf, pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
 
         pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFont('helvetica', 'normal');
         pdf.text("Municipalidad de San Isidro - Dirección de Control de Vectores", pdf.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
@@ -89,6 +102,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         if (vehicle.ultimaUrlTransaccion) addField("Foto Trans.:", "Adjunta (Ver sistema)");
         addField("Monto Pagado:", vehicle.ultimoMontoPagado ? `$${parseFloat(vehicle.ultimoMontoPagado).toFixed(2)}` : 'N/A');
         addField("Observaciones:", vehicle.ultimasObservaciones || 'N/A');
+        addField("Válida hasta:", formatDate(fechaVencPDF));
 
         yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Historial de Desinfecciones:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(10); pdf.setTextColor(lightTextColor);
@@ -127,7 +141,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
             </Box>
             <Box sx={{ textAlign: 'center', mb: 3, borderBottom: `2px solid ${theme.palette.primary.main}`, pb: 2 }}>
                 <img src={LOGO_SAN_ISIDRO_URL} alt="Logo San Isidro" style={{height: 50, marginBottom: theme.spacing(1)}} onError={(e) => e.target.style.display='none'}/>
-                <Typography variant="h4" component="h2" sx={{ color: theme.palette.primary.dark }} gutterBottom>CREDENCIAL DE DESINFECCIÓN</Typography>
+                <Typography variant="h4" component="h2" sx={{ color: theme.palette.primary.dark }} gutterBottom>{credencialVencida ? 'CREDENCIAL DE DESINFECCIÓN VENCIDA' : 'CREDENCIAL DE DESINFECCIÓN'}</Typography>
                 <Typography variant="subtitle1" color="text.secondary">Municipalidad de San Isidro - Dirección de Control de Vectores</Typography>
             </Box>
 
@@ -159,6 +173,11 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
                 <Typography variant="body1"><strong>Nº Transacción:</strong> {vehicle.ultimaTransaccionPago || 'N/A'} {vehicle.ultimaUrlTransaccion && <Button size="small" href={vehicle.ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
                 <Typography variant="body1"><strong>Monto Pagado:</strong> {vehicle.ultimoMontoPagado ? `$${parseFloat(vehicle.ultimoMontoPagado).toFixed(2)}` : 'N/A'}</Typography>
                 <Typography variant="body1"><strong>Observaciones:</strong> {vehicle.ultimasObservaciones || 'N/A'}</Typography>
+                {fechaVencimiento && (
+                    <Typography variant="body1" sx={{color: credencialVencida ? theme.palette.error.main : 'inherit'}}>
+                        <strong>Válida hasta:</strong> {formatDate(fechaVencimiento)}
+                    </Typography>
+                )}
             </Box>
 
 
