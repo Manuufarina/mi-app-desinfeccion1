@@ -31,7 +31,14 @@ export const StyledPaper = styled(Paper)(({ theme }) => ({
     marginBottom: theme.spacing(2),
 }));
 
-export const TIPOS_VEHICULO = ["Particular", "Remis", "Escolar", "Transporte de Carga", "Taxi", "Otro"];
+export const TIPOS_VEHICULO = ["Particular", "Remis", "Escolar", "Transporte de Carga", "Transporte de Alimentos", "Taxi", "Otro"];
+
+export const DIAS_VIGENCIA_TIPO = {
+    Taxi: 60,
+    Remis: 30,
+    Escolar: 30,
+    'Transporte de Alimentos': 30,
+};
 export const MARCAS_VEHICULO = [
     "Toyota",
     "Volkswagen",
