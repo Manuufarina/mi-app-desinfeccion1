@@ -7,6 +7,7 @@ import {
     updateDoc,
     deleteDoc,
     getDoc,
+    getDocs,
     Timestamp,
     onSnapshot
 } from 'firebase/firestore';
@@ -265,5 +266,27 @@ export const handleDeleteDisinfection = async (vehiclesCollectionPath, vehicleId
     });
     const updatedSnap = await getDoc(vehicleRef);
     return { id: updatedSnap.id, ...updatedSnap.data() };
+};
+
+export const addAdminUser = async (usersCollectionPath, username, password) => {
+    const q = query(collection(db, usersCollectionPath), where('username', '==', username));
+    const existing = await getDocs(q);
+    if (!existing.empty) {
+        throw new Error('Usuario ya existe.');
+    }
+    const ref = doc(collection(db, usersCollectionPath));
+    await setDoc(ref, { username, password });
+    return { id: ref.id, username };
+};
+
+export const fetchAdminUsers = (usersCollectionPath, callback) => {
+    const q = query(collection(db, usersCollectionPath));
+    return onSnapshot(q, (snap) => {
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback({ data });
+    }, (error) => {
+        console.error('User Fetch Error: ', error);
+        callback({ error: 'Error al cargar usuarios.' });
+    });
 };
 

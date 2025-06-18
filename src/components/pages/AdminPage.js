@@ -10,6 +10,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PriceChangeIcon from '@mui/icons-material/PriceChange';
 import DownloadIcon from '@mui/icons-material/Download';
+import PersonIcon from '@mui/icons-material/Person';
 // import { styled } from '@mui/material/styles'; // StyledPaper is imported
 // import Paper from '@mui/material/Paper'; // StyledPaper is imported
 import { StyledPaper, theme, TIPOS_VEHICULO } from '../../theme'; // Import from theme
@@ -35,10 +36,14 @@ const AdminPage = ({
     filterHasta,
     setFilterHasta,
     allVehicles,
+    adminUsers,
+    onAddUser,
 }) => {
     const [nuevoValorM3, setNuevoValorM3] = useState(valorMetroCubico);
     const [exportDesde, setExportDesde] = useState('');
     const [exportHasta, setExportHasta] = useState('');
+    const [newUsername, setNewUsername] = useState('');
+    const [newPassword, setNewPassword] = useState('');
 
     useEffect(() => {
         setNuevoValorM3(valorMetroCubico);
@@ -57,6 +62,12 @@ const AdminPage = ({
         const to = exportHasta ? new Date(exportHasta) : null;
         if (to) to.setHours(23,59,59,999);
         exportDisinfectionsToExcel(allVehicles || [], from, to);
+    };
+
+    const handleCreateUser = () => {
+        onAddUser(newUsername.trim(), newPassword);
+        setNewUsername('');
+        setNewPassword('');
     };
 
     return (
@@ -126,6 +137,24 @@ const AdminPage = ({
                     <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExport}>Exportar</Button>
                 </Box>
             </Box>
+
+            <Accordion sx={{ mt: 4 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-users-content" id="panel-users-header">
+                    <PersonIcon sx={{ mr: 1, color: 'action.active' }} /> <Typography>Usuarios Administradores</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                        <TextField label="Usuario" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} size="small" />
+                        <TextField label="Contraseña" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} size="small" />
+                        <Button variant="contained" onClick={handleCreateUser}>Agregar</Button>
+                    </Box>
+                    <List dense>
+                        {adminUsers && adminUsers.map(u => (
+                            <ListItem key={u.id}><ListItemText primary={u.username} /></ListItem>
+                        ))}
+                    </List>
+                </AccordionDetails>
+            </Accordion>
         </StyledPaper>
     );
 };
