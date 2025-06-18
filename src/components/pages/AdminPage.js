@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     TextField, Button, Box, Typography, IconButton, List, ListItem, ListItemText,
     Accordion, AccordionSummary, AccordionDetails, InputAdornment,
-    FormControl, InputLabel, Select, MenuItem
+    FormControl, InputLabel, Select, MenuItem,
+    FormControlLabel, Checkbox
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchIcon from '@mui/icons-material/Search';
@@ -35,6 +36,8 @@ const AdminPage = ({
     setFilterDesde,
     filterHasta,
     setFilterHasta,
+    filterSinDesinfeccion,
+    setFilterSinDesinfeccion,
     allVehicles,
     adminUsers,
     onAddUser,
@@ -115,6 +118,10 @@ const AdminPage = ({
                 </FormControl>
                 <TextField type="date" label="Desde" value={filterDesde} onChange={(e) => setFilterDesde(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }}/>
                 <TextField type="date" label="Hasta" value={filterHasta} onChange={(e) => setFilterHasta(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 150 }}/>
+                <FormControlLabel
+                    control={<Checkbox checked={filterSinDesinfeccion} onChange={(e) => setFilterSinDesinfeccion(e.target.checked)} />}
+                    label="Sin desinfección"
+                />
                 <Button variant="contained" onClick={handleSearch} startIcon={<SearchIcon />}>Buscar</Button>
             </Box>
             {searchResults.length > 0 ? (

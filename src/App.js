@@ -115,6 +115,7 @@ function App() {
     const [filterTipoVehiculo, setFilterTipoVehiculo] = useState('');
     const [filterDesde, setFilterDesde] = useState('');
     const [filterHasta, setFilterHasta] = useState('');
+    const [filterSinDesinfeccion, setFilterSinDesinfeccion] = useState(false);
     const [searchResults, setSearchResults] = useState([]);
     const [allVehiclesForDashboard, setAllVehiclesForDashboard] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -315,6 +316,9 @@ function App() {
                 return d <= to;
             });
         }
+        if (filterSinDesinfeccion) {
+            results = results.filter(v => !v.ultimaFechaDesinfeccion);
+        }
         return results;
     };
 
@@ -340,7 +344,7 @@ function App() {
         if (currentPage === 'admin') {
             setSearchResults(applyFilters());
         }
-    }, [allVehiclesForDashboard, currentPage, searchTerm, filterTipoVehiculo, filterDesde, filterHasta]);
+    }, [allVehiclesForDashboard, currentPage, searchTerm, filterTipoVehiculo, filterDesde, filterHasta, filterSinDesinfeccion]);
 
     // showSnackbar and handleCloseSnackbar are obtained from useSnackbar hook
 
@@ -580,6 +584,8 @@ function App() {
                             setFilterDesde={setFilterDesde}
                             filterHasta={filterHasta}
                             setFilterHasta={setFilterHasta}
+                            filterSinDesinfeccion={filterSinDesinfeccion}
+                            setFilterSinDesinfeccion={setFilterSinDesinfeccion}
                             allVehicles={allVehiclesForDashboard}
                             adminUsers={adminUsers}
                             onAddUser={handleAddAdminUser}
