@@ -472,7 +472,11 @@ function App() {
                         {adminLoggedIn && !guestView && (
                             <Button color="inherit" onClick={handleAdminLogout}>Salir</Button>
                         )}
-                        {currentUser && <Typography variant="caption" sx={{ml:2}}>ID: {currentUser.isAnonymous ? "Anónimo" : currentUser.uid.substring(0,6)}</Typography>}
+                        {currentUser && (
+                            <Typography variant="caption" sx={{ ml: 2 }}>
+                                ID: {adminLoggedIn ? 'admin' : currentUser.isAnonymous ? 'Anónimo' : currentUser.uid.substring(0, 6)}
+                            </Typography>
+                        )}
                     </Toolbar>
                 </AppBar>
                 {adminLoggedIn && !guestView && (
