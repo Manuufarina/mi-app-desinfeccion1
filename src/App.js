@@ -21,7 +21,9 @@ import {
     handleUpdateDisinfection as updateDisinfectionService,
     handleDeleteDisinfection as deleteDisinfectionService,
     addAdminUser as addAdminUserService,
-    fetchAdminUsers as fetchAdminUsersService
+    fetchAdminUsers as fetchAdminUsersService,
+    addLogEntry as addLogEntryService,
+    fetchLogs as fetchLogsService
     // uploadFileToStorage is used by addDisinfectionService, not directly here
 } from './services/firestoreService';
 
@@ -78,6 +80,7 @@ import DigitalCredential from './components/pages/DigitalCredential';
 import DashboardPage from './components/pages/DashboardPage';
 import SearchDisinfectionPage from './components/pages/SearchDisinfectionPage';
 import LoginPage from './components/pages/LoginPage';
+import LogsPage from './components/pages/LogsPage';
 
 // const LOGO_SAN_ISIDRO_URL = "https://www.sanisidro.gob.ar/sites/default/files/logo_san_isidro_horizontal_blanco_web_1.png"; // Moved to theme
 
@@ -128,6 +131,7 @@ function App() {
         localStorage.getItem('adminLoggedIn') === 'true'
     );
     const [adminUsers, setAdminUsers] = useState([]);
+    const [logs, setLogs] = useState([]);
 
     const muiTheme = useTheme();
     const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
@@ -160,6 +164,9 @@ function App() {
         try {
             await addAdminUserService(usersCollectionPath, username, password);
             showSnackbar('Usuario creado', 'success');
+            if (currentUser) {
+                await addLogEntryService(logsCollectionPath, currentUser.uid, 'Alta usuario', `User ${username}`);
+            }
         } catch (e) {
             console.error('Add user error:', e);
             showSnackbar(e.message || 'Error al crear usuario', 'error');
@@ -170,6 +177,7 @@ function App() {
     const vehiclesCollectionPath = `artifacts/${appId}/public/data/vehiculos`;
     const configCollectionPath = `artifacts/${appId}/public/data/configuracion`;
     const usersCollectionPath = `artifacts/${appId}/public/data/usuarios`;
+    const logsCollectionPath = `artifacts/${appId}/public/data/logs`;
 
     useEffect(() => {
         setConfigLoading(true); // Set true when starting
@@ -209,6 +217,17 @@ function App() {
         return () => unsubscribe();
     }, [usersCollectionPath, showSnackbar]);
 
+    useEffect(() => {
+        const unsub = fetchLogsService(logsCollectionPath, (result) => {
+            if (result.error) {
+                showSnackbar(result.error, 'error');
+            } else {
+                setLogs(result.data);
+            }
+        });
+        return () => unsub();
+    }, [logsCollectionPath, showSnackbar]);
+
     const handleUpdateValorMetroCubico = async (nuevoValor) => {
         setLoading(true);
         try {
@@ -221,6 +240,9 @@ function App() {
             setValorMetroCubico(updatedValor);
             if(newConfigDocId && !configDocId) setConfigDocId(newConfigDocId);
             showSnackbar("Valor por m³ actualizado.", "success"); // showSnackbar from useSnackbar
+            if (currentUser) {
+                await addLogEntryService(logsCollectionPath, currentUser.uid, 'Actualización precio', `Nuevo valor ${updatedValor}`);
+            }
         } catch (error) {
             console.error("Error actualizando valor: ", error);
             showSnackbar(error.message || "Error al actualizar valor.", "error"); // showSnackbar from useSnackbar
@@ -335,6 +357,7 @@ function App() {
         try {
             const newVehicle = await registerVehicleService(vehiclesCollectionPath, vehicleData, currentUser.uid);
             showSnackbar("Vehículo registrado.", "success"); // showSnackbar from useSnackbar
+            await addLogEntryService(logsCollectionPath, currentUser.uid, 'Alta vehículo', `Patente ${newVehicle.patente}`);
             setSelectedVehicleForApp(newVehicle);
             setCurrentPage('credential');
         } catch (e) {
@@ -385,7 +408,8 @@ function App() {
             );
             setSelectedVehicleForApp(updatedVehicle);
             showSnackbar("Desinfección registrada.", "success"); // showSnackbar from useSnackbar
-        } catch (e) { 
+            await addLogEntryService(logsCollectionPath, currentUser.uid, 'Alta desinfección', `Vehículo ${vehicleId}`);
+        } catch (e) {
             console.error("Add Disinfection Error: ", e); 
             showSnackbar(e.message || "Error al registrar desinfección.", "error"); // showSnackbar from useSnackbar
         }
@@ -399,6 +423,7 @@ function App() {
             const updated = await updateVehicleService(vehiclesCollectionPath, vehicleId, data);
             setSelectedVehicleForApp(updated);
             showSnackbar("Vehículo actualizado.", "success");
+            await addLogEntryService(logsCollectionPath, currentUser.uid, 'Edición vehículo', `Patente ${updated.patente}`);
             setCurrentPage('vehicleDetail');
         } catch (e) {
             console.error("Update Vehicle Error: ", e);
@@ -413,6 +438,7 @@ function App() {
         try {
             await deleteVehicleService(vehiclesCollectionPath, vehicleId);
             showSnackbar("Vehículo eliminado.", "success");
+            await addLogEntryService(logsCollectionPath, currentUser.uid, 'Baja vehículo', `ID ${vehicleId}`);
             setCurrentPage('admin');
         } catch (e) {
             console.error("Delete Vehicle Error: ", e);
@@ -428,6 +454,7 @@ function App() {
             const updated = await updateDisinfectionService(vehiclesCollectionPath, vehicleId, fechaRegistroMillis, data);
             setSelectedVehicleForApp(updated);
             showSnackbar("Registro actualizado.", "success");
+            await addLogEntryService(logsCollectionPath, currentUser.uid, 'Edición desinfección', `Vehículo ${vehicleId}`);
         } catch (e) {
             console.error("Update Disinfection Error: ", e);
             showSnackbar(e.message || "Error al actualizar registro.", "error");
@@ -442,6 +469,7 @@ function App() {
             const updated = await deleteDisinfectionService(vehiclesCollectionPath, vehicleId, fechaRegistroMillis);
             setSelectedVehicleForApp(updated);
             showSnackbar("Registro eliminado.", "success");
+            await addLogEntryService(logsCollectionPath, currentUser.uid, 'Baja desinfección', `Vehículo ${vehicleId}`);
         } catch (e) {
             console.error("Delete Disinfection Error: ", e);
             showSnackbar(e.message || "Error al eliminar registro.", "error");
@@ -494,6 +522,7 @@ function App() {
                                 <Button color="inherit" onClick={() => navigate('home')} title="Inicio">Inicio</Button>
                                 <Button color="inherit" onClick={() => navigate('dashboard')} startIcon={<BarChartIcon/>}>Dashboard</Button>
                                 <Button type="button" color="inherit" onClick={() => navigate('admin')} startIcon={<SettingsIcon/>}>Admin</Button>
+                                <Button color="inherit" onClick={() => navigate('logs')}>Logs</Button>
                             </>
                         )}
                         {adminLoggedIn && !guestView && (
@@ -513,6 +542,7 @@ function App() {
                                 <ListItemButton onClick={() => navigate('home')}><ListItemText primary="Inicio" /></ListItemButton>
                                 <ListItemButton onClick={() => navigate('dashboard')}><ListItemText primary="Dashboard" /></ListItemButton>
                                 <ListItemButton onClick={() => navigate('admin')}><ListItemText primary="Admin" /></ListItemButton>
+                                <ListItemButton onClick={() => navigate('logs')}><ListItemText primary="Logs" /></ListItemButton>
                             </List>
                         </Box>
                     </Drawer>
@@ -563,6 +593,7 @@ function App() {
                         />
                     )}
                     {adminLoggedIn && !guestView && currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
+                    {adminLoggedIn && !guestView && currentPage === 'logs' && <LogsPage logs={logs} />}
                     {adminLoggedIn && !guestView && currentPage === 'vehicleDetail' && selectedVehicleForApp && (
                         <VehicleDetailPage
                             vehicle={selectedVehicleForApp}

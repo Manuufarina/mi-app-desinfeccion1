@@ -8,6 +8,8 @@ import {
     deleteDoc,
     getDoc,
     getDocs,
+    addDoc,
+    orderBy,
     Timestamp,
     onSnapshot
 } from 'firebase/firestore';
@@ -287,6 +289,27 @@ export const fetchAdminUsers = (usersCollectionPath, callback) => {
     }, (error) => {
         console.error('User Fetch Error: ', error);
         callback({ error: 'Error al cargar usuarios.' });
+    });
+};
+
+export const addLogEntry = async (logsCollectionPath, userId, action, details) => {
+    const ref = collection(db, logsCollectionPath);
+    await addDoc(ref, {
+        userId,
+        action,
+        details,
+        timestamp: Timestamp.now()
+    });
+};
+
+export const fetchLogs = (logsCollectionPath, callback) => {
+    const q = query(collection(db, logsCollectionPath), orderBy('timestamp', 'desc'));
+    return onSnapshot(q, (snap) => {
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback({ data });
+    }, (error) => {
+        console.error('Logs Fetch Error: ', error);
+        callback({ error: 'Error al cargar logs.' });
     });
 };
 
