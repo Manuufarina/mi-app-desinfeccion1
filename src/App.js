@@ -75,6 +75,7 @@ import VehicleDetailPage from './components/pages/VehicleDetailPage';
 import DigitalCredential from './components/pages/DigitalCredential';
 import DashboardPage from './components/pages/DashboardPage';
 import SearchDisinfectionPage from './components/pages/SearchDisinfectionPage';
+import LoginPage from './components/pages/LoginPage';
 
 // const LOGO_SAN_ISIDRO_URL = "https://www.sanisidro.gob.ar/sites/default/files/logo_san_isidro_horizontal_blanco_web_1.png"; // Moved to theme
 
@@ -120,12 +121,34 @@ function App() {
     const [configLoading, setConfigLoading] = useState(true);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [autoOpenAddForm, setAutoOpenAddForm] = useState(false);
+    const [guestView, setGuestView] = useState(false);
+    const [adminLoggedIn, setAdminLoggedIn] = useState(() =>
+        localStorage.getItem('adminLoggedIn') === 'true'
+    );
 
     const muiTheme = useTheme();
     const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
 
     const toggleDrawer = (open) => () => {
         setDrawerOpen(open);
+    };
+
+    const handleAdminLogin = (username, password) => {
+        if (username === 'admin' && password === 'vectores2025') {
+            setAdminLoggedIn(true);
+            localStorage.setItem('adminLoggedIn', 'true');
+            showSnackbar('Inicio de sesi\u00f3n exitoso', 'success');
+            setCurrentPage('home');
+        } else {
+            showSnackbar('Credenciales inv\u00e1lidas', 'error');
+        }
+    };
+
+    const handleAdminLogout = () => {
+        setAdminLoggedIn(false);
+        localStorage.removeItem('adminLoggedIn');
+        showSnackbar('Ses\u00edon finalizada', 'info');
+        setCurrentPage('home');
     };
 
 
@@ -245,6 +268,24 @@ function App() {
         }
         return results;
     };
+
+    useEffect(() => {
+        if (!isAuthReady || !currentUser) return;
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (id && currentUser.isAnonymous) {
+            selectVehicleForDetailService(vehiclesCollectionPath, id)
+                .then(vehicle => {
+                    setSelectedVehicleForApp(vehicle);
+                    setCurrentPage('credential');
+                    setGuestView(true);
+                })
+                .catch(e => {
+                    console.error('Error loading vehicle for guest view:', e);
+                    showSnackbar('Credencial no encontrada.', 'error');
+                });
+        }
+    }, [isAuthReady, currentUser, vehiclesCollectionPath, showSnackbar]);
 
     useEffect(() => {
         if (currentPage === 'admin') {
@@ -389,47 +430,71 @@ function App() {
 
     if (!isAuthReady) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}><CircularProgress /><Typography variant="h6" sx={{ mt: 2 }}>Cargando...</Typography></Box>;
 
+    if (!adminLoggedIn && !guestView) {
+        return (
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <LoginPage onLogin={handleAdminLogin} />
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={6000}
+                    onClose={handleCloseSnackbar}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
+            </ThemeProvider>
+        );
+    }
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline /> 
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="static" elevation={1}>
                     <Toolbar>
-                        {isMobile && (
+                        {isMobile && adminLoggedIn && !guestView && (
                             <IconButton color="inherit" edge="start" onClick={toggleDrawer(true)} sx={{ mr: 1 }}>
                                 <MenuIcon />
                             </IconButton>
                         )}
                         <img src={LOGO_SAN_ISIDRO_URL} alt="Logo San Isidro" style={{height: 36, marginRight: 16, filter: 'brightness(0) invert(1)'}} onError={(e) => e.target.style.display='none'}/>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Control de Desinfección Vehicular</Typography>
-                        {!isMobile && (
+                        {!isMobile && adminLoggedIn && !guestView && (
                             <>
                                 <Button color="inherit" onClick={() => navigate('home')} title="Inicio">Inicio</Button>
                                 <Button color="inherit" onClick={() => navigate('dashboard')} startIcon={<BarChartIcon/>}>Dashboard</Button>
                                 <Button type="button" color="inherit" onClick={() => navigate('admin')} startIcon={<SettingsIcon/>}>Admin</Button>
                             </>
                         )}
+                        {adminLoggedIn && !guestView && (
+                            <Button color="inherit" onClick={handleAdminLogout}>Salir</Button>
+                        )}
                         {currentUser && <Typography variant="caption" sx={{ml:2}}>ID: {currentUser.isAnonymous ? "Anónimo" : currentUser.uid.substring(0,6)}</Typography>}
                     </Toolbar>
                 </AppBar>
-                <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
-                    <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
-                        <List>
-                            <ListItemButton onClick={() => navigate('home')}><ListItemText primary="Inicio" /></ListItemButton>
-                            <ListItemButton onClick={() => navigate('dashboard')}><ListItemText primary="Dashboard" /></ListItemButton>
-                            <ListItemButton onClick={() => navigate('admin')}><ListItemText primary="Admin" /></ListItemButton>
-                        </List>
-                    </Box>
-                </Drawer>
+                {adminLoggedIn && !guestView && (
+                    <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
+                        <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+                            <List>
+                                <ListItemButton onClick={() => navigate('home')}><ListItemText primary="Inicio" /></ListItemButton>
+                                <ListItemButton onClick={() => navigate('dashboard')}><ListItemText primary="Dashboard" /></ListItemButton>
+                                <ListItemButton onClick={() => navigate('admin')}><ListItemText primary="Admin" /></ListItemButton>
+                            </List>
+                        </Box>
+                    </Drawer>
+                )}
                 <Container component="main" sx={{ mt: 2, mb: 2, flexGrow: 1 }}>
                     {(loading || configLoading || geminiLoading) && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', my: 3, position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1500 }}>
                            <Paper elevation={4} sx={{p:2, display:'flex', alignItems:'center', borderRadius:2}}> <CircularProgress size={24} sx={{mr:1}}/> <Typography>{geminiLoading ? "Procesando con IA..." : "Cargando..."}</Typography></Paper>
                         </Box>
                     )}
-                    {currentPage === 'home' && <HomePage navigate={navigate} />}
-                    {currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
-                    {currentPage === 'editVehicle' && selectedVehicleForApp && (
+                    {adminLoggedIn && !guestView && currentPage === 'home' && <HomePage navigate={navigate} />}
+                    {adminLoggedIn && !guestView && currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
+                    {adminLoggedIn && !guestView && currentPage === 'editVehicle' && selectedVehicleForApp && (
                         <VehicleForm
                             onSubmit={(data) => handleUpdateVehicle(selectedVehicleForApp.id, data)}
                             navigate={navigate}
@@ -438,7 +503,7 @@ function App() {
                             editMode
                         />
                     )}
-                    {currentPage === 'admin' && (
+                    {adminLoggedIn && !guestView && currentPage === 'admin' && (
                         <AdminPage
                             searchTerm={searchTerm}
                             setSearchTerm={setSearchTerm}
@@ -457,15 +522,15 @@ function App() {
                             allVehicles={allVehiclesForDashboard}
                         />
                     )}
-                    {currentPage === 'searchDisinfection' && (
+                    {adminLoggedIn && !guestView && currentPage === 'searchDisinfection' && (
                         <SearchDisinfectionPage
                             vehicles={allVehiclesForDashboard}
                             onSelectVehicle={(id) => handleSelectVehicleForDetail(id, true)}
                             navigate={navigate}
                         />
                     )}
-                    {currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
-                    {currentPage === 'vehicleDetail' && selectedVehicleForApp && (
+                    {adminLoggedIn && !guestView && currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
+                    {adminLoggedIn && !guestView && currentPage === 'vehicleDetail' && selectedVehicleForApp && (
                         <VehicleDetailPage
                             vehicle={selectedVehicleForApp}
                             onAddDisinfection={handleAddDisinfection}
