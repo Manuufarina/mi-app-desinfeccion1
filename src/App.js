@@ -19,7 +19,9 @@ import {
     handleUpdateVehicle as updateVehicleService,
     handleDeleteVehicle as deleteVehicleService,
     handleUpdateDisinfection as updateDisinfectionService,
-    handleDeleteDisinfection as deleteDisinfectionService
+    handleDeleteDisinfection as deleteDisinfectionService,
+    addAdminUser as addAdminUserService,
+    fetchAdminUsers as fetchAdminUsersService
     // uploadFileToStorage is used by addDisinfectionService, not directly here
 } from './services/firestoreService';
 
@@ -125,6 +127,7 @@ function App() {
     const [adminLoggedIn, setAdminLoggedIn] = useState(() =>
         localStorage.getItem('adminLoggedIn') === 'true'
     );
+    const [adminUsers, setAdminUsers] = useState([]);
 
     const muiTheme = useTheme();
     const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
@@ -134,7 +137,8 @@ function App() {
     };
 
     const handleAdminLogin = (username, password) => {
-        if (username === 'admin' && password === 'vectores2025') {
+        const match = adminUsers.find(u => u.username === username && u.password === password);
+        if (username === 'admin' && password === 'vectores2025' || match) {
             setAdminLoggedIn(true);
             localStorage.setItem('adminLoggedIn', 'true');
             showSnackbar('Inicio de sesi\u00f3n exitoso', 'success');
@@ -151,9 +155,21 @@ function App() {
         setCurrentPage('home');
     };
 
+    const handleAddAdminUser = async (username, password) => {
+        if (!username || !password) return;
+        try {
+            await addAdminUserService(usersCollectionPath, username, password);
+            showSnackbar('Usuario creado', 'success');
+        } catch (e) {
+            console.error('Add user error:', e);
+            showSnackbar(e.message || 'Error al crear usuario', 'error');
+        }
+    };
+
 
     const vehiclesCollectionPath = `artifacts/${appId}/public/data/vehiculos`;
-    const configCollectionPath = `artifacts/${appId}/public/data/configuracion`; 
+    const configCollectionPath = `artifacts/${appId}/public/data/configuracion`;
+    const usersCollectionPath = `artifacts/${appId}/public/data/usuarios`;
 
     useEffect(() => {
         setConfigLoading(true); // Set true when starting
@@ -181,6 +197,17 @@ function App() {
             unsubscribe();
         };
     }, [configCollectionPath, showSnackbar]); // Added showSnackbar to dependencies
+
+    useEffect(() => {
+        const unsubscribe = fetchAdminUsersService(usersCollectionPath, (result) => {
+            if (result.error) {
+                showSnackbar(result.error, 'error');
+            } else {
+                setAdminUsers(result.data);
+            }
+        });
+        return () => unsubscribe();
+    }, [usersCollectionPath, showSnackbar]);
 
     const handleUpdateValorMetroCubico = async (nuevoValor) => {
         setLoading(true);
@@ -524,6 +551,8 @@ function App() {
                             filterHasta={filterHasta}
                             setFilterHasta={setFilterHasta}
                             allVehicles={allVehiclesForDashboard}
+                            adminUsers={adminUsers}
+                            onAddUser={handleAddAdminUser}
                         />
                     )}
                     {adminLoggedIn && !guestView && currentPage === 'searchDisinfection' && (
