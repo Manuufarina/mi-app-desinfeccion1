@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Typography, Grid, Paper } from '@mui/material';
+import React, { useMemo, useState } from 'react';
+import { Typography, Grid, Paper, Box, TextField, MenuItem } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
@@ -9,10 +9,22 @@ import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is avail
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
 // }));
 
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 const DashboardPage = ({ vehicles }) => {
     const theme = useTheme(); // MUI's useTheme hook
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
+
+    const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+
+    const years = useMemo(() => {
+        const startYear = 2020;
+        return Array.from({ length: currentYear - startYear + 1 }, (_, i) => currentYear - i);
+    }, [currentYear]);
+
+    const monthName = MONTHS_ES[selectedMonth];
 
     const desinfeccionesMesActual = useMemo(() => {
         return vehicles.reduce((acc, vehicle) => {
@@ -23,15 +35,15 @@ const DashboardPage = ({ vehicles }) => {
                         ? desinf.fecha.toDate()
                         : new Date(desinf.fecha);
                     if (!isNaN(fechaDesinf) &&
-                        fechaDesinf.getMonth() === currentMonth &&
-                        fechaDesinf.getFullYear() === currentYear) {
+                        fechaDesinf.getMonth() === selectedMonth &&
+                        fechaDesinf.getFullYear() === selectedYear) {
                         acc.push({ ...desinf, tipoVehiculo: vehicle.tipoVehiculo, patente: vehicle.patente });
                     }
                 }
             });
             return acc;
         }, []);
-    }, [vehicles, currentMonth, currentYear]);
+    }, [vehicles, selectedMonth, selectedYear]);
 
     const vehiculosDesinfectadosEsteMes = desinfeccionesMesActual.length;
 
@@ -55,16 +67,28 @@ const DashboardPage = ({ vehicles }) => {
             <Typography variant="h4" component="h1" gutterBottom sx={{textAlign: 'center', mb:3, color: theme.palette.primary.dark}}>
                 Dashboard de Desinfecciones
             </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
+                <TextField select label="Mes" value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} size="small">
+                    {MONTHS_ES.map((name, idx) => (
+                        <MenuItem key={idx} value={idx}>{name}</MenuItem>
+                    ))}
+                </TextField>
+                <TextField select label="Año" value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} size="small">
+                    {years.map(y => (
+                        <MenuItem key={y} value={y}>{y}</MenuItem>
+                    ))}
+                </TextField>
+            </Box>
             <Grid container spacing={3}>
                 <Grid item xs={12} md={4}>
                     <Paper elevation={3} sx={{ p: 2, textAlign: 'center', backgroundColor: theme.palette.primary.lighter+'22', height: '100%' }}>
-                        <Typography variant="h6" sx={{ color: theme.palette.primary.dark }}>Desinfecciones este Mes</Typography>
+                        <Typography variant="h6" sx={{ color: theme.palette.primary.dark }}>Desinfecciones en {monthName} {selectedYear}</Typography>
                         <Typography variant="h3" sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>{vehiculosDesinfectadosEsteMes}</Typography>
                     </Paper>
                 </Grid>
                 <Grid item xs={12} md={4}>
                      <Paper elevation={3} sx={{ p: 2, textAlign: 'center', backgroundColor: theme.palette.secondary.lighter+'22', height: '100%' }}>
-                        <Typography variant="h6" sx={{ color: theme.palette.secondary.dark }}>Recaudación del Mes</Typography>
+                        <Typography variant="h6" sx={{ color: theme.palette.secondary.dark }}>Recaudación de {monthName} {selectedYear}</Typography>
                         <Typography variant="h3" sx={{ color: theme.palette.secondary.main, fontWeight: 'bold' }}>${montoTotalRecaudadoMes.toFixed(2)}</Typography>
                     </Paper>
                 </Grid>
@@ -77,7 +101,7 @@ const DashboardPage = ({ vehicles }) => {
 
                 <Grid item xs={12} md={desinfeccionesPorTipo.length > 0 ? 7 : 12}>
                     <Paper elevation={2} sx={{p:2, mt:2}}>
-                    <Typography variant="h6" gutterBottom sx={{mt:2, textAlign:'center'}}>Desinfecciones por Tipo de Vehículo (Mes Actual)</Typography>
+                    <Typography variant="h6" gutterBottom sx={{mt:2, textAlign:'center'}}>Desinfecciones por Tipo de Vehículo ({monthName} {selectedYear})</Typography>
                     {desinfeccionesPorTipo.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={desinfeccionesPorTipo} margin={{ top: 5, right: 10, left: -20, bottom: 55 }}>
@@ -90,7 +114,7 @@ const DashboardPage = ({ vehicles }) => {
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <Typography sx={{textAlign:'center', fontStyle:'italic', mt:3}}>No hay datos de desinfecciones por tipo este mes.</Typography>
+                        <Typography sx={{textAlign:'center', fontStyle:'italic', mt:3}}>No hay datos de desinfecciones para este periodo.</Typography>
                     )}
                     </Paper>
                 </Grid>
