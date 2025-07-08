@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Typography, Grid, Paper, Box, TextField, MenuItem } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is available via useTheme
@@ -60,6 +60,24 @@ const DashboardPage = ({ vehicles }) => {
         return desinfeccionesMesActual.reduce((sum, desinf) => sum + (parseFloat(desinf.montoPagado) || 0), 0);
     }, [desinfeccionesMesActual]);
 
+    const recaudacionPorDia = useMemo(() => {
+        const totals = {};
+        desinfeccionesMesActual.forEach(desinf => {
+            if (desinf.fecha) {
+                const fecha = typeof desinf.fecha.toDate === 'function'
+                    ? desinf.fecha.toDate()
+                    : new Date(desinf.fecha);
+                const dia = fecha.getDate();
+                totals[dia] = (totals[dia] || 0) + (parseFloat(desinf.montoPagado) || 0);
+            }
+        });
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        return Array.from({ length: daysInMonth }, (_, i) => ({
+            dia: i + 1,
+            monto: totals[i + 1] || 0
+        }));
+    }, [desinfeccionesMesActual, selectedMonth, selectedYear]);
+
     const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#8884D8', '#FF6347', '#32CD32'];
 
     return (
@@ -92,10 +110,30 @@ const DashboardPage = ({ vehicles }) => {
                         <Typography variant="h3" sx={{ color: theme.palette.secondary.main, fontWeight: 'bold' }}>${montoTotalRecaudadoMes.toFixed(2)}</Typography>
                     </Paper>
                 </Grid>
-                 <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={4}>
                      <Paper elevation={3} sx={{ p: 2, textAlign: 'center', backgroundColor: (theme.palette.accent ? theme.palette.accent.main : '#D4AF37')+'22', height: '100%' }}>
                         <Typography variant="h6" style={{color: (theme.palette.accent ? theme.palette.accent.dark : '#D4AF37') || (theme.palette.accent ? theme.palette.accent.main : '#D4AF37')}}>Vehículos Registrados</Typography>
                         <Typography variant="h3" style={{color: (theme.palette.accent ? theme.palette.accent.main : '#D4AF37'), fontWeight: 'bold'}}>{vehicles.length}</Typography>
+                    </Paper>
+                </Grid>
+
+                <Grid item xs={12}>
+                    <Paper elevation={2} sx={{p:2, mt:2}}>
+                    <Typography variant="h6" gutterBottom sx={{mt:2, textAlign:'center'}}>Recaudación diaria ({monthName} {selectedYear})</Typography>
+                    {recaudacionPorDia.some(d => d.monto > 0) ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={recaudacionPorDia} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="dia" allowDecimals={false} />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Legend />
+                                <Line type="monotone" dataKey="monto" stroke={theme.palette.primary.main} name="Monto" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <Typography sx={{textAlign:'center', fontStyle:'italic', mt:3}}>No hay datos de recaudación para este periodo.</Typography>
+                    )}
                     </Paper>
                 </Grid>
 
