@@ -325,19 +325,21 @@ function App() {
                     registradoPor: currentUser.uid,
                     fechaRegistro: Timestamp.now()
                 };
-                const updatedHistorial = [newDisinfection, ...(vehicle.historialDesinfecciones || [])].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
-                
+                const updatedHistorial = [newDisinfection, ...(vehicle.historialDesinfecciones || [])]
+                    .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
+                const last = updatedHistorial[0];
+
                 await updateDoc(vehicleRef, {
-                    ultimaFechaDesinfeccion: newDisinfection.fecha,
-                    ultimoReciboPago: newDisinfection.recibo,
-                    ultimaUrlRecibo: newDisinfection.urlRecibo,
-                    ultimaTransaccionPago: newDisinfection.transaccion,
-                    ultimaUrlTransaccion: newDisinfection.urlTransaccion,
-                    ultimoMontoPagado: newDisinfection.montoPagado,
-                    ultimasObservaciones: newDisinfection.observaciones, 
+                    ultimaFechaDesinfeccion: last.fecha,
+                    ultimoReciboPago: last.recibo,
+                    ultimaUrlRecibo: last.urlRecibo,
+                    ultimaTransaccionPago: last.transaccion,
+                    ultimaUrlTransaccion: last.urlTransaccion,
+                    ultimoMontoPagado: last.montoPagado,
+                    ultimasObservaciones: last.observaciones,
                     historialDesinfecciones: updatedHistorial
                 });
-                setSelectedVehicleForApp(prev => ({ ...prev, ...newDisinfection, historialDesinfecciones: updatedHistorial }));
+                setSelectedVehicleForApp(prev => ({ ...prev, ...last, historialDesinfecciones: updatedHistorial }));
                 showSnackbar("Desinfección registrada.", "success");
             } else showSnackbar("Vehículo no encontrado.", "error");
         } catch (e) { 
