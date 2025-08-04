@@ -70,6 +70,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 // Recharts
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
 
 const LOGO_SAN_ISIDRO_URL = "https://www.sanisidro.gob.ar/sites/default/files/logo_san_isidro_horizontal_blanco_web_1.png"; 
 
@@ -106,7 +107,7 @@ const theme = createTheme({
         background: { default: '#f4f6f8', paper: '#ffffff' }
     },
     typography: {
-        fontFamily: '"Plus Jakarta Sans", "Roboto", "Helvetica", "Arial", sans-serif',
+        fontFamily: '"Plus Jakarta Sans", sans-serif',
         h4: { fontWeight: 700 }, h5: { fontWeight: 600 }, h6: { fontWeight: 500 },
     },
     components: {
@@ -953,7 +954,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         return timestamp.toDate().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
-    const createPDF = () => {
+    const createPDF = async () => {
         let pdf;
         try {
             pdf = new jsPDF('p', 'pt', 'a4');
@@ -972,11 +973,20 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
 
         pdf.setFontSize(20); pdf.setTextColor(primaryColor); pdf.setFontType('bold');
         pdf.text("CREDENCIAL DE DESINFECCIÓN VEHICULAR", pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
-        
+
         pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFontType('normal');
         pdf.text("Municipalidad de San Isidro - Dirección de Control de Vectores", pdf.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
 
-        let yPos = 130; const lineHeight = 22; const sectionSpacing = 20; const leftMargin = 40; const valueOffset = 180; 
+        // QR de verificación
+        const verificationUrl = `${window.location.origin}/verificar/${vehicle.id}`;
+        try {
+            const qrDataUrl = await QRCode.toDataURL(verificationUrl);
+            pdf.addImage(qrDataUrl, 'PNG', pdf.internal.pageSize.getWidth() - 120, 40, 80, 80);
+        } catch (qrError) {
+            console.error('QR generation error:', qrError);
+        }
+
+        let yPos = 130; const lineHeight = 22; const sectionSpacing = 20; const leftMargin = 40; const valueOffset = 180;
 
         const addField = (label, value, isImportant = false) => {
             pdf.setFontType('bold'); pdf.setTextColor(textColor); pdf.text(label, leftMargin, yPos);
@@ -1041,12 +1051,12 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
     };
 
     const generatePDF = async () => {
-        const pdf = createPDF();
+        const pdf = await createPDF();
         if (pdf) pdf.save(`credencial_${vehicle.patente}.pdf`);
     };
 
     const getPDFBase64 = async () => {
-        const pdf = createPDF();
+        const pdf = await createPDF();
         return pdf ? pdf.output('datauristring').split(',')[1] : null;
     };
 
