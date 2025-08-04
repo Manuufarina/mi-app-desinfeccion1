@@ -122,7 +122,37 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 }));
 
 const TIPOS_VEHICULO = ["Particular", "Remis", "Escolar", "Transporte de Carga", "Taxi", "Otro"];
-const VALOR_METRO_CUBICO_DEFAULT = 150; 
+const VALOR_METRO_CUBICO_DEFAULT = 150;
+
+const isDisinfectionExpired = (tipoVehiculo, fecha) => {
+    if (!fecha || typeof fecha.toDate !== 'function') return true;
+    const lastDate = fecha.toDate();
+    const expiry = new Date(lastDate);
+    if (tipoVehiculo && tipoVehiculo.toLowerCase() === 'taxi') {
+        expiry.setMonth(expiry.getMonth() + 2);
+    } else {
+        expiry.setMonth(expiry.getMonth() + 1);
+    }
+    return new Date() > expiry;
+};
+
+const processVehicleData = (vehicle) => {
+    const historial = [...(vehicle.historialDesinfecciones || [])]
+        .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
+    const last = historial[0] || null;
+    return {
+        ...vehicle,
+        historialDesinfecciones: historial,
+        ultimaFechaDesinfeccion: last ? last.fecha : null,
+        ultimoReciboPago: last ? last.recibo : null,
+        ultimaUrlRecibo: last ? last.urlRecibo : null,
+        ultimaTransaccionPago: last ? last.transaccion : null,
+        ultimaUrlTransaccion: last ? last.urlTransaccion : null,
+        ultimoMontoPagado: last ? last.montoPagado : null,
+        ultimasObservaciones: last ? last.observaciones : null,
+        ultimaDesinfeccionVencida: isDisinfectionExpired(vehicle.tipoVehiculo, last ? last.fecha : null)
+    };
+};
 
 // IMPORTANTE: Reemplaza "" con tu API Key real de Gemini
 const GEMINI_API_KEY = ""; // <--- REEMPLAZA ESTO CON TU API KEY
@@ -241,7 +271,7 @@ function App() {
         setLoading(true);
         const q = query(collection(db, vehiclesCollectionPath));
         const unsubVehicles = onSnapshot(q, (snap) => {
-            const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const data = snap.docs.map(d => processVehicleData({ id: d.id, ...d.data() }));
             setAllVehiclesForDashboard(data);
             if (currentPage === 'admin' && !searchTerm) setSearchResults(data);
             setLoading(false);
@@ -265,7 +295,7 @@ function App() {
             const dataToSave = { ...vehicleData, patente: vehicleData.patente.toUpperCase(), metrosCubicos: m3Num, fechaCreacion: Timestamp.now(), historialDesinfecciones: [], createdBy: currentUser.uid };
             const docRef = await addDoc(collection(db, vehiclesCollectionPath), dataToSave);
             showSnackbar("Vehículo registrado.", "success");
-            setSelectedVehicleForApp({ id: docRef.id, ...dataToSave });
+            setSelectedVehicleForApp(processVehicleData({ id: docRef.id, ...dataToSave }));
             setCurrentPage('credential');
         } catch (e) { console.error("Register Error: ", e); showSnackbar("Error al registrar.", "error"); }
         setLoading(false);
@@ -284,7 +314,10 @@ function App() {
         setLoading(true);
         try {
             const docSnap = await getDoc(doc(db, vehiclesCollectionPath, vehicleId));
-            if (docSnap.exists()) { setSelectedVehicleForApp({ id: docSnap.id, ...docSnap.data() }); setCurrentPage('vehicleDetail'); }
+            if (docSnap.exists()) {
+                setSelectedVehicleForApp(processVehicleData({ id: docSnap.id, ...docSnap.data() }));
+                setCurrentPage('vehicleDetail');
+            }
             else showSnackbar("Vehículo no encontrado.", "error");
         } catch (e) { console.error("Select Error: ", e); showSnackbar("Error al cargar vehículo.", "error"); }
         setLoading(false);
@@ -328,24 +361,24 @@ function App() {
                 };
                 const updatedHistorial = [newDisinfection, ...(vehicle.historialDesinfecciones || [])]
                     .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
-                const last = updatedHistorial[0];
+                const processed = processVehicleData({ ...vehicle, historialDesinfecciones: updatedHistorial });
 
                 await updateDoc(vehicleRef, {
-                    ultimaFechaDesinfeccion: last.fecha,
-                    ultimoReciboPago: last.recibo,
-                    ultimaUrlRecibo: last.urlRecibo,
-                    ultimaTransaccionPago: last.transaccion,
-                    ultimaUrlTransaccion: last.urlTransaccion,
-                    ultimoMontoPagado: last.montoPagado,
-                    ultimasObservaciones: last.observaciones,
+                    ultimaFechaDesinfeccion: processed.ultimaFechaDesinfeccion,
+                    ultimoReciboPago: processed.ultimoReciboPago,
+                    ultimaUrlRecibo: processed.ultimaUrlRecibo,
+                    ultimaTransaccionPago: processed.ultimaTransaccionPago,
+                    ultimaUrlTransaccion: processed.ultimaUrlTransaccion,
+                    ultimoMontoPagado: processed.ultimoMontoPagado,
+                    ultimasObservaciones: processed.ultimasObservaciones,
                     historialDesinfecciones: updatedHistorial
                 });
-                setSelectedVehicleForApp(prev => ({ ...prev, ...last, historialDesinfecciones: updatedHistorial }));
+                setSelectedVehicleForApp(prev => ({ ...prev, ...processed }));
                 showSnackbar("Desinfección registrada.", "success");
             } else showSnackbar("Vehículo no encontrado.", "error");
-        } catch (e) { 
-            console.error("Add Disinfection Error: ", e); 
-            showSnackbar("Error al registrar desinfección: " + e.message, "error"); 
+        } catch (e) {
+            console.error("Add Disinfection Error: ", e);
+            showSnackbar("Error al registrar desinfección: " + e.message, "error");
         }
         setLoading(false);
     };
@@ -361,19 +394,18 @@ function App() {
                 const vehicle = snap.data();
                 const historial = [...(vehicle.historialDesinfecciones || [])];
                 historial.splice(index, 1);
-                historial.sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
-                const last = historial[0] || null;
+                const processed = processVehicleData({ ...vehicle, historialDesinfecciones: historial });
                 await updateDoc(vehicleRef, {
                     historialDesinfecciones: historial,
-                    ultimaFechaDesinfeccion: last ? last.fecha : null,
-                    ultimoReciboPago: last ? last.recibo : null,
-                    ultimaUrlRecibo: last ? last.urlRecibo : null,
-                    ultimaTransaccionPago: last ? last.transaccion : null,
-                    ultimaUrlTransaccion: last ? last.urlTransaccion : null,
-                    ultimoMontoPagado: last ? last.montoPagado : null,
-                    ultimasObservaciones: last ? last.observaciones : null
+                    ultimaFechaDesinfeccion: processed.ultimaFechaDesinfeccion,
+                    ultimoReciboPago: processed.ultimoReciboPago,
+                    ultimaUrlRecibo: processed.ultimaUrlRecibo,
+                    ultimaTransaccionPago: processed.ultimaTransaccionPago,
+                    ultimaUrlTransaccion: processed.ultimaUrlTransaccion,
+                    ultimoMontoPagado: processed.ultimoMontoPagado,
+                    ultimasObservaciones: processed.ultimasObservaciones
                 });
-                setSelectedVehicleForApp(prev => ({ ...prev, ...snap.data(), historialDesinfecciones: historial, ultimaFechaDesinfeccion: last ? last.fecha : null, ultimoReciboPago: last ? last.recibo : null, ultimaUrlRecibo: last ? last.urlRecibo : null, ultimaTransaccionPago: last ? last.transaccion : null, ultimaUrlTransaccion: last ? last.urlTransaccion : null, ultimoMontoPagado: last ? last.montoPagado : null, ultimasObservaciones: last ? last.observaciones : null }));
+                setSelectedVehicleForApp(prev => ({ ...prev, ...processed }));
                 showSnackbar('Desinfección eliminada.', 'success');
             } else showSnackbar('Vehículo no encontrado.', 'error');
         } catch (e) {
@@ -819,7 +851,7 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, onDeleteDisinfection, o
                 <Typography><strong>Email:</strong> {vehicle.emailPropietario || 'N/A'}</Typography>
                 <Typography><strong>Nº Vehículo Municipal:</strong> {vehicle.numeroVehiculoMunicipal || 'N/A'}</Typography>
                 <Divider sx={{my:1}}/>
-                <Typography><strong>Última Desinfección:</strong> <span style={{ fontWeight: 'bold', color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
+                <Typography><strong>Última Desinfección:</strong> <span style={{ fontWeight: 'bold', color: vehicle.ultimaFechaDesinfeccion ? (vehicle.ultimaDesinfeccionVencida ? theme.palette.error.dark : theme.palette.success.dark) : theme.palette.error.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
                 <Typography><strong>Último Recibo:</strong> {vehicle.ultimoReciboPago || 'N/A'} {vehicle.ultimaUrlRecibo && <Button size="small" href={vehicle.ultimaUrlRecibo} target="_blank" rel="noopener noreferrer">Ver Foto</Button>}</Typography>
                 <Typography><strong>Última Transacción:</strong> {vehicle.ultimaTransaccionPago || 'N/A'} {vehicle.ultimaUrlTransaccion && <Button size="small" href={vehicle.ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">Ver Foto</Button>}</Typography>
                 <Typography><strong>Último Monto Pagado:</strong> $ {vehicle.ultimoMontoPagado ? parseFloat(vehicle.ultimoMontoPagado).toFixed(2) : 'N/A'}</Typography>
@@ -948,11 +980,13 @@ const VehicleDetailPage = ({ vehicle, onAddDisinfection, onDeleteDisinfection, o
     );
 };
 
-const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { 
+const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
     const formatDate = (timestamp) => {
         if (!timestamp) return 'PENDIENTE';
         return timestamp.toDate().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
     };
+
+    const lastColor = vehicle.ultimaFechaDesinfeccion && !vehicle.ultimaDesinfeccionVencida ? 'success' : 'error';
 
     const createPDF = async () => {
         let pdf;
@@ -971,10 +1005,10 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
 
         try { pdf.setFont('Plus Jakarta Sans', 'normal'); } catch (e) { pdf.setFont('helvetica', 'normal'); }
 
-        pdf.setFontSize(20); pdf.setTextColor(primaryColor); pdf.setFontType('bold');
+        pdf.setFontSize(20); pdf.setTextColor(primaryColor); pdf.setFont(undefined, 'bold');
         pdf.text("CREDENCIAL DE DESINFECCIÓN VEHICULAR", pdf.internal.pageSize.getWidth() / 2, 60, { align: 'center' });
 
-        pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFontType('normal');
+        pdf.setFontSize(12); pdf.setTextColor(textColor); pdf.setFont(undefined, 'normal');
         pdf.text("Municipalidad de San Isidro - Dirección de Control de Vectores", pdf.internal.pageSize.getWidth() / 2, 80, { align: 'center' });
 
         // QR de verificación
@@ -989,13 +1023,13 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         let yPos = 130; const lineHeight = 22; const sectionSpacing = 20; const leftMargin = 40; const valueOffset = 180;
 
         const addField = (label, value, isImportant = false) => {
-            pdf.setFontType('bold'); pdf.setTextColor(textColor); pdf.text(label, leftMargin, yPos);
-            pdf.setFontType('normal'); pdf.setTextColor(isImportant ? accentColor : lightTextColor);
+            pdf.setFont(undefined, 'bold'); pdf.setTextColor(textColor); pdf.text(label, leftMargin, yPos);
+            pdf.setFont(undefined, 'normal'); pdf.setTextColor(isImportant ? accentColor : lightTextColor);
             pdf.text(String(value || 'N/A'), leftMargin + valueOffset, yPos);
             yPos += lineHeight;
         };
         
-        pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
+        pdf.setFontSize(14); pdf.setFont(undefined, 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Datos del Vehículo:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(11);
 
         addField("Patente:", vehicle.patente, true);
@@ -1007,7 +1041,7 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         addField("Email:", vehicle.emailPropietario || 'N/A');
         addField("Nº Vehículo Municipal:", vehicle.numeroVehiculoMunicipal || 'N/A');
         
-        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
+        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont(undefined, 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Última Desinfección:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(11);
 
         addField("Fecha:", formatDate(vehicle.ultimaFechaDesinfeccion), true);
@@ -1020,14 +1054,14 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
         addField("Observaciones:", vehicle.ultimasObservaciones || 'N/A');
 
 
-        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFontType('bold'); pdf.setTextColor(primaryColor);
+        yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont(undefined, 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Historial de Desinfecciones:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(10); pdf.setTextColor(lightTextColor);
 
         if (vehicle.historialDesinfecciones && vehicle.historialDesinfecciones.length > 0) {
             vehicle.historialDesinfecciones.forEach((item) => {
                 if (yPos > pdf.internal.pageSize.getHeight() - 90) {  
                     pdf.addPage(); yPos = 40;
-                    pdf.setFontSize(14);pdf.setFontType('bold');pdf.setTextColor(primaryColor);
+                    pdf.setFontSize(14);pdf.setFont(undefined, 'bold');pdf.setTextColor(primaryColor);
                     pdf.text("Historial (Cont.):", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2);
                     pdf.setFontSize(10);pdf.setTextColor(lightTextColor);
                 }
@@ -1111,11 +1145,11 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => {
             </Accordion>
             
             <Accordion defaultExpanded sx={{mb:2, boxShadow: 'none', '&:before': {display: 'none'} }}>
-                 <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{backgroundColor: (vehicle.ultimaFechaDesinfeccion ? theme.palette.success.lighter : theme.palette.warning.lighter)+'33', borderRadius:1}}>
-                    <VerifiedUserIcon sx={{mr:1, color: vehicle.ultimaFechaDesinfeccion ? 'success.main' : 'warning.main' }} /> <Typography variant="h6" color={vehicle.ultimaFechaDesinfeccion ? 'success.dark' : 'warning.dark'}>Última Desinfección</Typography>
+                 <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{backgroundColor: (lastColor === 'success' ? theme.palette.success.lighter : theme.palette.error.lighter)+'33', borderRadius:1}}>
+                    <VerifiedUserIcon sx={{mr:1, color: `${lastColor}.main` }} /> <Typography variant="h6" color={lastColor === 'success' ? 'success.dark' : 'error.dark'}>Última Desinfección</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{pt:1.5}}>
-                    <Typography variant="body1"><strong>Fecha:</strong> <span style={{ fontWeight: 'bold', color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
+                    <Typography variant="body1"><strong>Fecha:</strong> <span style={{ fontWeight: 'bold', color: lastColor === 'success' ? theme.palette.success.dark : theme.palette.error.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
                     <Typography variant="body1"><strong>Recibo (MSI):</strong> {vehicle.ultimoReciboPago || 'N/A'} {vehicle.ultimaUrlRecibo && <Button size="small" href={vehicle.ultimaUrlRecibo} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
                     <Typography variant="body1"><strong>Nº Transacción:</strong> {vehicle.ultimaTransaccionPago || 'N/A'} {vehicle.ultimaUrlTransaccion && <Button size="small" href={vehicle.ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
                     <Typography variant="body1"><strong>Monto Pagado:</strong> {vehicle.ultimoMontoPagado ? `$${parseFloat(vehicle.ultimoMontoPagado).toFixed(2)}` : 'N/A'}</Typography>
