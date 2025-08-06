@@ -17,6 +17,7 @@ import EditIcon from '@mui/icons-material/Edit';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is available via useTheme
+import { getLatestDisinfectionInfo } from '../../utils/disinfectionUtils';
 import { Timestamp } from 'firebase/firestore';
 import { callGeminiAPI } from '../../services/geminiService';
 
@@ -62,6 +63,16 @@ const VehicleDetailPage = ({
             if (onAutoShowHandled) onAutoShowHandled();
         }
     }, [autoShowAddForm, onAutoShowHandled]);
+
+    const {
+        ultimaFechaDesinfeccion,
+        ultimoReciboPago,
+        ultimaUrlRecibo,
+        ultimaTransaccionPago,
+        ultimaUrlTransaccion,
+        ultimoMontoPagado,
+        ultimasObservaciones,
+    } = useMemo(() => getLatestDisinfectionInfo(vehicle), [vehicle]);
 
     const montoEstimado = useMemo(() => {
         const m3 = parseFloat(vehicle.metrosCubicos);
@@ -196,11 +207,11 @@ const VehicleDetailPage = ({
                 <Typography><strong>Propietario:</strong> {vehicle.propietarioNombre}</Typography>
                 <Typography><strong>Nº Vehículo Municipal:</strong> {vehicle.numeroVehiculoMunicipal || 'N/A'}</Typography>
                 <Divider sx={{my:1}}/>
-                <Typography><strong>Última Desinfección:</strong> <span style={{ fontWeight: 'bold', color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
-                <Typography><strong>Último Recibo:</strong> {vehicle.ultimoReciboPago || 'N/A'} {vehicle.ultimaUrlRecibo && <Button size="small" href={vehicle.ultimaUrlRecibo} target="_blank" rel="noopener noreferrer">Ver Foto</Button>}</Typography>
-                <Typography><strong>Última Transacción:</strong> {vehicle.ultimaTransaccionPago || 'N/A'} {vehicle.ultimaUrlTransaccion && <Button size="small" href={vehicle.ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">Ver Foto</Button>}</Typography>
-                <Typography><strong>Último Monto Pagado:</strong> $ {vehicle.ultimoMontoPagado ? parseFloat(vehicle.ultimoMontoPagado).toFixed(2) : 'N/A'}</Typography>
-                <Typography><strong>Últimas Observaciones:</strong> {vehicle.ultimasObservaciones || 'N/A'}</Typography>
+                <Typography><strong>Última Desinfección:</strong> <span style={{ fontWeight: 'bold', color: ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(ultimaFechaDesinfeccion)}</span></Typography>
+                <Typography><strong>Último Recibo:</strong> {ultimoReciboPago || 'N/A'} {ultimaUrlRecibo && <Button size="small" href={ultimaUrlRecibo} target="_blank" rel="noopener noreferrer">Ver Foto</Button>}</Typography>
+                <Typography><strong>Última Transacción:</strong> {ultimaTransaccionPago || 'N/A'} {ultimaUrlTransaccion && <Button size="small" href={ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">Ver Foto</Button>}</Typography>
+                <Typography><strong>Último Monto Pagado:</strong> $ {ultimoMontoPagado ? parseFloat(ultimoMontoPagado).toFixed(2) : 'N/A'}</Typography>
+                <Typography><strong>Últimas Observaciones:</strong> {ultimasObservaciones || 'N/A'}</Typography>
             </Paper>
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, my: 3 }}>
