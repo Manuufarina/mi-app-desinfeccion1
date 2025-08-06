@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Typography,
     Button,
@@ -18,7 +18,8 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
-import { StyledPaper, LOGO_SAN_ISIDRO_URL, DIAS_VIGENCIA_TIPO } from '../../theme'; // Import from theme
+import { StyledPaper, LOGO_SAN_ISIDRO_URL } from '../../theme';
+import { getLatestDisinfectionInfo } from '../../utils/disinfectionUtils';
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
@@ -37,11 +38,16 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         return new Date(timestamp).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
-    const diasVigencia = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
-    const ultima = vehicle.ultimaFechaDesinfeccion ? (vehicle.ultimaFechaDesinfeccion.toDate ? vehicle.ultimaFechaDesinfeccion.toDate() : new Date(vehicle.ultimaFechaDesinfeccion)) : null;
-    const fechaVencimiento = vehicle.fechaVencimiento
-        ? (vehicle.fechaVencimiento.toDate ? vehicle.fechaVencimiento.toDate() : new Date(vehicle.fechaVencimiento))
-        : (ultima ? new Date(ultima.getTime() + diasVigencia * 24 * 60 * 60 * 1000) : null);
+    const {
+        ultimaFechaDesinfeccion,
+        fechaVencimiento,
+        ultimoReciboPago,
+        ultimaUrlRecibo,
+        ultimaTransaccionPago,
+        ultimaUrlTransaccion,
+        ultimoMontoPagado,
+        ultimasObservaciones,
+    } = useMemo(() => getLatestDisinfectionInfo(vehicle), [vehicle]);
     const credencialVencida = fechaVencimiento ? new Date() > fechaVencimiento : false;
 
     const generatePDF = async () => {
@@ -58,9 +64,16 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         const lightTextColor = '#555555';
         const accentColor = theme.palette.secondary.main;
 
-        const diasVigenciaPDF = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
-        const ultimaPDF = vehicle.ultimaFechaDesinfeccion ? (vehicle.ultimaFechaDesinfeccion.toDate ? vehicle.ultimaFechaDesinfeccion.toDate() : new Date(vehicle.ultimaFechaDesinfeccion)) : null;
-        const fechaVencPDF = vehicle.fechaVencimiento ? (vehicle.fechaVencimiento.toDate ? vehicle.fechaVencimiento.toDate() : new Date(vehicle.fechaVencimiento)) : (ultimaPDF ? new Date(ultimaPDF.getTime() + diasVigenciaPDF * 24 * 60 * 60 * 1000) : null);
+        const {
+            ultimaFechaDesinfeccion: ultimaPDF,
+            fechaVencimiento: fechaVencPDF,
+            ultimoReciboPago: ultimoReciboPDF,
+            ultimaUrlRecibo: ultimaUrlReciboPDF,
+            ultimaTransaccionPago: ultimaTransaccionPDF,
+            ultimaUrlTransaccion: ultimaUrlTransaccionPDF,
+            ultimoMontoPagado: ultimoMontoPDF,
+            ultimasObservaciones: ultimasObservacionesPDF,
+        } = getLatestDisinfectionInfo(vehicle);
         const isVencidaPDF = fechaVencPDF ? new Date() > fechaVencPDF : false;
 
         try { pdf.setFont('Plus Jakarta Sans', 'normal'); } catch (e) { pdf.setFont('helvetica', 'normal'); }
@@ -95,13 +108,13 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
         yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(primaryColor);
         pdf.text("Última Desinfección:", leftMargin, yPos); yPos += lineHeight + (sectionSpacing / 2); pdf.setFontSize(11);
 
-        addField("Fecha:", formatDate(vehicle.ultimaFechaDesinfeccion), true);
-        addField("Recibo (MSI):", vehicle.ultimoReciboPago || 'N/A');
-        if (vehicle.ultimaUrlRecibo) addField("Foto Recibo:", "Adjunta (Ver sistema)");
-        addField("Transacción:", vehicle.ultimaTransaccionPago || 'N/A');
-        if (vehicle.ultimaUrlTransaccion) addField("Foto Trans.:", "Adjunta (Ver sistema)");
-        addField("Monto Pagado:", vehicle.ultimoMontoPagado ? `$${parseFloat(vehicle.ultimoMontoPagado).toFixed(2)}` : 'N/A');
-        addField("Observaciones:", vehicle.ultimasObservaciones || 'N/A');
+        addField("Fecha:", formatDate(ultimaPDF), true);
+        addField("Recibo (MSI):", ultimoReciboPDF || 'N/A');
+        if (ultimaUrlReciboPDF) addField("Foto Recibo:", "Adjunta (Ver sistema)");
+        addField("Transacción:", ultimaTransaccionPDF || 'N/A');
+        if (ultimaUrlTransaccionPDF) addField("Foto Trans.:", "Adjunta (Ver sistema)");
+        addField("Monto Pagado:", ultimoMontoPDF ? `$${parseFloat(ultimoMontoPDF).toFixed(2)}` : 'N/A');
+        addField("Observaciones:", ultimasObservacionesPDF || 'N/A');
         addField("Válida hasta:", formatDate(fechaVencPDF));
 
         yPos += sectionSpacing; pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(primaryColor);
@@ -178,15 +191,15 @@ const DigitalCredential = ({ vehicle, navigate, showSnackbar }) => { // LOGO_SAN
 
             <Box sx={{mb:3}}>
                 <Box sx={{display:'flex', alignItems:'center', mb:1}}>
-                    <VerifiedUserIcon sx={{mr:1, color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.main : theme.palette.warning.main}} />
-                    <Typography variant="h6" sx={{color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark}}>Última Desinfección</Typography>
+                    <VerifiedUserIcon sx={{mr:1, color: ultimaFechaDesinfeccion ? theme.palette.success.main : theme.palette.warning.main}} />
+                    <Typography variant="h6" sx={{color: ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark}}>Última Desinfección</Typography>
                 </Box>
                 <Divider sx={{mb:1}} />
-                <Typography variant="body1"><strong>Fecha:</strong> <span style={{ fontWeight: 'bold', color: vehicle.ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(vehicle.ultimaFechaDesinfeccion)}</span></Typography>
-                <Typography variant="body1"><strong>Recibo (MSI):</strong> {vehicle.ultimoReciboPago || 'N/A'} {vehicle.ultimaUrlRecibo && <Button size="small" href={vehicle.ultimaUrlRecibo} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
-                <Typography variant="body1"><strong>Nº Transacción:</strong> {vehicle.ultimaTransaccionPago || 'N/A'} {vehicle.ultimaUrlTransaccion && <Button size="small" href={vehicle.ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
-                <Typography variant="body1"><strong>Monto Pagado:</strong> {vehicle.ultimoMontoPagado ? `$${parseFloat(vehicle.ultimoMontoPagado).toFixed(2)}` : 'N/A'}</Typography>
-                <Typography variant="body1"><strong>Observaciones:</strong> {vehicle.ultimasObservaciones || 'N/A'}</Typography>
+                <Typography variant="body1"><strong>Fecha:</strong> <span style={{ fontWeight: 'bold', color: ultimaFechaDesinfeccion ? theme.palette.success.dark : theme.palette.warning.dark }}>{formatDate(ultimaFechaDesinfeccion)}</span></Typography>
+                <Typography variant="body1"><strong>Recibo (MSI):</strong> {ultimoReciboPago || 'N/A'} {ultimaUrlRecibo && <Button size="small" href={ultimaUrlRecibo} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
+                <Typography variant="body1"><strong>Nº Transacción:</strong> {ultimaTransaccionPago || 'N/A'} {ultimaUrlTransaccion && <Button size="small" href={ultimaUrlTransaccion} target="_blank" rel="noopener noreferrer">(Ver Foto)</Button>}</Typography>
+                <Typography variant="body1"><strong>Monto Pagado:</strong> {ultimoMontoPagado ? `$${parseFloat(ultimoMontoPagado).toFixed(2)}` : 'N/A'}</Typography>
+                <Typography variant="body1"><strong>Observaciones:</strong> {ultimasObservaciones || 'N/A'}</Typography>
                 {fechaVencimiento && (
                     <Typography variant="body1" sx={{color: credencialVencida ? theme.palette.error.main : 'inherit'}}>
                         <strong>Válida hasta:</strong> {formatDate(fechaVencimiento)}
