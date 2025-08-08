@@ -36,7 +36,7 @@ const SearchDisinfectionPage = ({ vehicles, onSelectVehicle, navigate }) => {
                 <List>
                     {results.map(vehicle => (
                         <ListItem key={vehicle.id} divider secondaryAction={
-                            <Button variant="outlined" size="small" onClick={() => onSelectVehicle(vehicle.id)}>Seleccionar</Button>
+                            <Button variant="outlined" size="small" onClick={() => onSelectVehicle(vehicle.id)}>Ver Detalles</Button>
                         }>
                             <ListItemText
                                 primary={<Typography variant="subtitle1" color="primary">{vehicle.patente}</Typography>}

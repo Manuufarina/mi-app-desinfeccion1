@@ -37,7 +37,8 @@ const VehicleDetailPage = ({
     valorMetroCubico,
     setGeminiLoading,
     autoShowAddForm = false,
-    onAutoShowHandled
+    onAutoShowHandled,
+    isRevisor = false
 }) => {
     const theme = useTheme(); // MUI's useTheme hook
     const [showAddDisinfectionForm, setShowAddDisinfectionForm] = useState(false);
@@ -194,7 +195,7 @@ const VehicleDetailPage = ({
     return (
         <StyledPaper>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <IconButton onClick={() => navigate('admin')}><ArrowBackIcon /></IconButton>
+                <IconButton onClick={() => navigate(isRevisor ? 'searchDisinfection' : 'admin')}><ArrowBackIcon /></IconButton>
                 <Typography variant="h5" component="h2" sx={{ml:1, color: theme.palette.primary.dark}}>Detalles del Vehículo</Typography>
             </Box>
             <Typography variant="h6" gutterBottom sx={{color: theme.palette.primary.light, fontWeight: 'medium'}}>{vehicle.patente}</Typography>
@@ -215,27 +216,35 @@ const VehicleDetailPage = ({
             </Paper>
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, my: 3 }}>
-                <Button variant="contained" color="secondary" startIcon={<AddCircleIcon />} onClick={() => setShowAddDisinfectionForm(!showAddDisinfectionForm)}>
-                    {showAddDisinfectionForm ? 'Cancelar Registro' : 'Registrar Desinfección'}
-                </Button>
-                <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
-                    Generar Boleta de Pago
-                </Button>
+                {!isRevisor && (
+                    <>
+                        <Button variant="contained" color="secondary" startIcon={<AddCircleIcon />} onClick={() => setShowAddDisinfectionForm(!showAddDisinfectionForm)}>
+                            {showAddDisinfectionForm ? 'Cancelar Registro' : 'Registrar Desinfección'}
+                        </Button>
+                        <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
+                            Generar Boleta de Pago
+                        </Button>
+                    </>
+                )}
                 <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => navigate('credential', vehicle)}>
                     Ver Credencial
                 </Button>
-                <Button variant="outlined" color="warning" startIcon={<SettingsIcon />} onClick={() => navigate('editVehicle', vehicle)}>
-                    Editar Vehículo
-                </Button>
-                <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => setOpenDeleteVehicleDialog(true)}>
-                    Eliminar Vehículo
-                </Button>
+                {!isRevisor && (
+                    <>
+                        <Button variant="outlined" color="warning" startIcon={<SettingsIcon />} onClick={() => navigate('editVehicle', vehicle)}>
+                            Editar Vehículo
+                        </Button>
+                        <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => setOpenDeleteVehicleDialog(true)}>
+                            Eliminar Vehículo
+                        </Button>
+                    </>
+                )}
                 <Button variant="outlined" color="info" startIcon={<AutoAwesomeIcon />} onClick={handleGenerateHistorySummary}>
                     ✨ Resumir Historial (IA)
                 </Button>
             </Box>
 
-            {showAddDisinfectionForm && (
+            {!isRevisor && showAddDisinfectionForm && (
                 <Paper component="form" onSubmit={handleOpenConfirmDialog} sx={{ p: 2.5, mt: 2, backgroundColor: theme.palette.grey[50], borderRadius: 1.5 }} elevation={2}>
                     <Typography variant="h6" gutterBottom sx={{ color: theme.palette.secondary.dark }}>Nueva Desinfección</Typography>
                     <Typography variant="subtitle1" gutterBottom>Monto Estimado a Pagar: <strong>${montoEstimado}</strong></Typography>
@@ -288,7 +297,7 @@ const VehicleDetailPage = ({
                                 key={index}
                                 divider
                                 sx={{ py: 0.5 }}
-                                secondaryAction={
+                                secondaryAction={!isRevisor && (
                                     <>
                                         <IconButton edge="end" size="small" onClick={() => setEditRecord(item)}>
                                             <EditIcon fontSize="inherit" />
@@ -297,7 +306,7 @@ const VehicleDetailPage = ({
                                             <DeleteIcon fontSize="inherit" />
                                         </IconButton>
                                     </>
-                                }
+                                )}
                             >
                                 <ListItemText
                                     primary={`Fecha: ${formatDate(item.fecha)}`}

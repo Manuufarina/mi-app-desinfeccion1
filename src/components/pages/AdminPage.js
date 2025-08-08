@@ -47,6 +47,7 @@ const AdminPage = ({
     const [exportHasta, setExportHasta] = useState('');
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [newRole, setNewRole] = useState('admin');
 
     useEffect(() => {
         setNuevoValorM3(valorMetroCubico);
@@ -68,9 +69,10 @@ const AdminPage = ({
     };
 
     const handleCreateUser = () => {
-        onAddUser(newUsername.trim(), newPassword);
+        onAddUser(newUsername.trim(), newPassword, newRole);
         setNewUsername('');
         setNewPassword('');
+        setNewRole('admin');
     };
 
     return (
@@ -147,17 +149,24 @@ const AdminPage = ({
 
             <Accordion sx={{ mt: 4 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-controls="panel-users-content" id="panel-users-header">
-                    <PersonIcon sx={{ mr: 1, color: 'action.active' }} /> <Typography>Usuarios Administradores</Typography>
+                    <PersonIcon sx={{ mr: 1, color: 'action.active' }} /> <Typography>Usuarios</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
                         <TextField label="Usuario" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} size="small" />
                         <TextField label="Contraseña" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} size="small" />
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                            <InputLabel id="role-label">Rol</InputLabel>
+                            <Select labelId="role-label" label="Rol" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
+                                <MenuItem value="admin">Admin</MenuItem>
+                                <MenuItem value="revisor">Revisor</MenuItem>
+                            </Select>
+                        </FormControl>
                         <Button variant="contained" onClick={handleCreateUser}>Agregar</Button>
                     </Box>
                     <List dense>
                         {adminUsers && adminUsers.map(u => (
-                            <ListItem key={u.id}><ListItemText primary={u.username} /></ListItem>
+                            <ListItem key={u.id}><ListItemText primary={`${u.username} (${u.role})`} /></ListItem>
                         ))}
                     </List>
                 </AccordionDetails>
