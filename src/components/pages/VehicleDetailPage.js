@@ -182,6 +182,24 @@ const VehicleDetailPage = ({
         }
     };
 
+    const handlePaymentClick = () => {
+        if (showAddDisinfectionForm) {
+            const monthCobra = disinfectionDate
+                ? new Date(disinfectionDate + "T00:00:00").toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+                : new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+            const observaciones = `Patente: ${vehicle.patente} - Mes: ${monthCobra} - Razón Social: ${vehicle.propietarioNombre}`;
+            const importe = amountPaid ? parseFloat(amountPaid).toFixed(2) : montoEstimado;
+            onOpenPaymentPage({
+                patente: vehicle.patente,
+                nombre: vehicle.propietarioNombre,
+                importe,
+                observaciones,
+            });
+        } else {
+            onOpenPaymentPage();
+        }
+    };
+
     const formatDate = (timestamp) => {
         if (!timestamp) return 'N/A';
         // Assuming timestamp is a Firebase Timestamp object
@@ -221,7 +239,7 @@ const VehicleDetailPage = ({
                         <Button variant="contained" color="secondary" startIcon={<AddCircleIcon />} onClick={() => setShowAddDisinfectionForm(!showAddDisinfectionForm)}>
                             {showAddDisinfectionForm ? 'Cancelar Registro' : 'Registrar Desinfección'}
                         </Button>
-                        <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
+                        <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={handlePaymentClick}>
                             Generar Boleta de Pago
                         </Button>
                     </>
