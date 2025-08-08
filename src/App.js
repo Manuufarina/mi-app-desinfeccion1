@@ -20,8 +20,8 @@ import {
     handleDeleteVehicle as deleteVehicleService,
     handleUpdateDisinfection as updateDisinfectionService,
     handleDeleteDisinfection as deleteDisinfectionService,
-    addAdminUser as addAdminUserService,
-    fetchAdminUsers as fetchAdminUsersService,
+    addUser as addUserService,
+    fetchUsers as fetchUsersService,
     addLogEntry as addLogEntryService,
     fetchLogs as fetchLogsService
     // uploadFileToStorage is used by addDisinfectionService, not directly here
@@ -128,11 +128,13 @@ function App() {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [autoOpenAddForm, setAutoOpenAddForm] = useState(false);
     const [guestView, setGuestView] = useState(false);
-    const [adminLoggedIn, setAdminLoggedIn] = useState(() =>
-        localStorage.getItem('adminLoggedIn') === 'true'
+    const [userRole, setUserRole] = useState(() =>
+        localStorage.getItem('userRole')
     );
-    const [adminUsers, setAdminUsers] = useState([]);
+    const [users, setUsers] = useState([]);
     const [logs, setLogs] = useState([]);
+    const isAdmin = userRole === 'admin';
+    const isRevisor = userRole === 'revisor';
 
     const muiTheme = useTheme();
     const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
@@ -141,11 +143,12 @@ function App() {
         setDrawerOpen(open);
     };
 
-    const handleAdminLogin = (username, password) => {
-        const match = adminUsers.find(u => u.username === username && u.password === password);
+    const handleUserLogin = (username, password) => {
+        const match = users.find(u => u.username === username && u.password === password);
         if (username === 'admin' && password === 'vectores2025' || match) {
-            setAdminLoggedIn(true);
-            localStorage.setItem('adminLoggedIn', 'true');
+            const role = match ? match.role : 'admin';
+            setUserRole(role);
+            localStorage.setItem('userRole', role);
             showSnackbar('Inicio de sesi\u00f3n exitoso', 'success');
             setCurrentPage('home');
         } else {
@@ -153,17 +156,17 @@ function App() {
         }
     };
 
-    const handleAdminLogout = () => {
-        setAdminLoggedIn(false);
-        localStorage.removeItem('adminLoggedIn');
+    const handleLogout = () => {
+        setUserRole(null);
+        localStorage.removeItem('userRole');
         showSnackbar('Ses\u00edon finalizada', 'info');
         setCurrentPage('home');
     };
 
-    const handleAddAdminUser = async (username, password) => {
+    const handleAddUser = async (username, password, role) => {
         if (!username || !password) return;
         try {
-            await addAdminUserService(usersCollectionPath, username, password);
+            await addUserService(usersCollectionPath, username, password, role);
             showSnackbar('Usuario creado', 'success');
             if (currentUser) {
                 await addLogEntryService(logsCollectionPath, currentUser.uid, 'Alta usuario', `User ${username}`);
@@ -208,11 +211,11 @@ function App() {
     }, [configCollectionPath, showSnackbar]); // Added showSnackbar to dependencies
 
     useEffect(() => {
-        const unsubscribe = fetchAdminUsersService(usersCollectionPath, (result) => {
+        const unsubscribe = fetchUsersService(usersCollectionPath, (result) => {
             if (result.error) {
                 showSnackbar(result.error, 'error');
             } else {
-                setAdminUsers(result.data);
+                setUsers(result.data);
             }
         });
         return () => unsubscribe();
@@ -489,11 +492,11 @@ function App() {
 
     if (!isAuthReady) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}><CircularProgress /><Typography variant="h6" sx={{ mt: 2 }}>Cargando...</Typography></Box>;
 
-    if (!adminLoggedIn && !guestView) {
+    if (!userRole && !guestView) {
         return (
             <ThemeProvider theme={theme}>
                 <CssBaseline />
-                <LoginPage onLogin={handleAdminLogin} />
+                <LoginPage onLogin={handleUserLogin} />
                 <Snackbar
                     open={snackbar.open}
                     autoHideDuration={6000}
@@ -514,14 +517,14 @@ function App() {
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="static" elevation={1}>
                     <Toolbar>
-                        {isMobile && adminLoggedIn && !guestView && (
+                        {isMobile && isAdmin && !guestView && (
                             <IconButton color="inherit" edge="start" onClick={toggleDrawer(true)} sx={{ mr: 1 }}>
                                 <MenuIcon />
                             </IconButton>
                         )}
                         <img src={LOGO_SAN_ISIDRO_URL} alt="Logo San Isidro" style={{height: 36, marginRight: 16, filter: 'brightness(0) invert(1)'}} onError={(e) => e.target.style.display='none'}/>
                         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Control de Desinfección Vehicular</Typography>
-                        {!isMobile && adminLoggedIn && !guestView && (
+                        {!isMobile && isAdmin && !guestView && (
                             <>
                                 <Button color="inherit" onClick={() => navigate('home')} title="Inicio">Inicio</Button>
                                 <Button color="inherit" onClick={() => navigate('dashboard')} startIcon={<BarChartIcon/>}>Dashboard</Button>
@@ -529,17 +532,17 @@ function App() {
                                 <Button color="inherit" onClick={() => navigate('logs')}>Logs</Button>
                             </>
                         )}
-                        {adminLoggedIn && !guestView && (
-                            <Button color="inherit" onClick={handleAdminLogout}>Salir</Button>
+                        {userRole && !guestView && (
+                            <Button color="inherit" onClick={handleLogout}>Salir</Button>
                         )}
                         {currentUser && (
                             <Typography variant="caption" sx={{ ml: 2 }}>
-                                ID: {adminLoggedIn ? 'admin' : currentUser.isAnonymous ? 'Anónimo' : currentUser.uid.substring(0, 6)}
+                                ID: {userRole ? userRole : currentUser.isAnonymous ? 'Anónimo' : currentUser.uid.substring(0, 6)}
                             </Typography>
                         )}
                     </Toolbar>
                 </AppBar>
-                {adminLoggedIn && !guestView && (
+                {isAdmin && !guestView && (
                     <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
                         <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
                             <List>
@@ -557,9 +560,9 @@ function App() {
                            <Paper elevation={4} sx={{p:2, display:'flex', alignItems:'center', borderRadius:2}}> <CircularProgress size={24} sx={{mr:1}}/> <Typography>{geminiLoading ? "Procesando con IA..." : "Cargando..."}</Typography></Paper>
                         </Box>
                     )}
-                    {adminLoggedIn && !guestView && currentPage === 'home' && <HomePage navigate={navigate} />}
-                    {adminLoggedIn && !guestView && currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
-                    {adminLoggedIn && !guestView && currentPage === 'editVehicle' && selectedVehicleForApp && (
+                    {userRole && !guestView && currentPage === 'home' && <HomePage navigate={navigate} role={userRole} />}
+                    {isAdmin && !guestView && currentPage === 'register' && <VehicleForm onSubmit={handleRegisterVehicle} navigate={navigate} showSnackbar={showSnackbar} />}
+                    {isAdmin && !guestView && currentPage === 'editVehicle' && selectedVehicleForApp && (
                         <VehicleForm
                             onSubmit={(data) => handleUpdateVehicle(selectedVehicleForApp.id, data)}
                             navigate={navigate}
@@ -568,7 +571,7 @@ function App() {
                             editMode
                         />
                     )}
-                    {adminLoggedIn && !guestView && currentPage === 'admin' && (
+                    {isAdmin && !guestView && currentPage === 'admin' && (
                         <AdminPage
                             searchTerm={searchTerm}
                             setSearchTerm={setSearchTerm}
@@ -587,20 +590,20 @@ function App() {
                             filterSinDesinfeccion={filterSinDesinfeccion}
                             setFilterSinDesinfeccion={setFilterSinDesinfeccion}
                             allVehicles={allVehiclesForDashboard}
-                            adminUsers={adminUsers}
-                            onAddUser={handleAddAdminUser}
+                            adminUsers={users}
+                            onAddUser={handleAddUser}
                         />
                     )}
-                    {adminLoggedIn && !guestView && currentPage === 'searchDisinfection' && (
+                    {userRole && !guestView && currentPage === 'searchDisinfection' && (
                         <SearchDisinfectionPage
                             vehicles={allVehiclesForDashboard}
-                            onSelectVehicle={(id) => handleSelectVehicleForDetail(id, true)}
+                            onSelectVehicle={(id) => handleSelectVehicleForDetail(id, isAdmin)}
                             navigate={navigate}
                         />
                     )}
-                    {adminLoggedIn && !guestView && currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
-                    {adminLoggedIn && !guestView && currentPage === 'logs' && <LogsPage logs={logs} />}
-                    {adminLoggedIn && !guestView && currentPage === 'vehicleDetail' && selectedVehicleForApp && (
+                    {isAdmin && !guestView && currentPage === 'dashboard' && <DashboardPage vehicles={allVehiclesForDashboard} />}
+                    {isAdmin && !guestView && currentPage === 'logs' && <LogsPage logs={logs} />}
+                    {userRole && !guestView && currentPage === 'vehicleDetail' && selectedVehicleForApp && (
                         <VehicleDetailPage
                             vehicle={selectedVehicleForApp}
                             onAddDisinfection={handleAddDisinfection}
@@ -614,6 +617,7 @@ function App() {
                             setGeminiLoading={setGeminiLoading}
                             autoShowAddForm={autoOpenAddForm}
                             onAutoShowHandled={() => setAutoOpenAddForm(false)}
+                            isRevisor={isRevisor}
                         />
                     )}
                     {currentPage === 'credential' && selectedVehicleForApp && <DigitalCredential vehicle={selectedVehicleForApp} navigate={navigate} showSnackbar={showSnackbar} />}

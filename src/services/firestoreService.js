@@ -270,18 +270,18 @@ export const handleDeleteDisinfection = async (vehiclesCollectionPath, vehicleId
     return { id: updatedSnap.id, ...updatedSnap.data() };
 };
 
-export const addAdminUser = async (usersCollectionPath, username, password) => {
+export const addUser = async (usersCollectionPath, username, password, role = 'admin') => {
     const q = query(collection(db, usersCollectionPath), where('username', '==', username));
     const existing = await getDocs(q);
     if (!existing.empty) {
         throw new Error('Usuario ya existe.');
     }
     const ref = doc(collection(db, usersCollectionPath));
-    await setDoc(ref, { username, password });
-    return { id: ref.id, username };
+    await setDoc(ref, { username, password, role });
+    return { id: ref.id, username, role };
 };
 
-export const fetchAdminUsers = (usersCollectionPath, callback) => {
+export const fetchUsers = (usersCollectionPath, callback) => {
     const q = query(collection(db, usersCollectionPath));
     return onSnapshot(q, (snap) => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
