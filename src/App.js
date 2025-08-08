@@ -121,6 +121,7 @@ function App() {
     const [loading, setLoading] = useState(false);
     // const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' }); // from useSnackbar
     const [openPaymentModal, setOpenPaymentModal] = useState(false);
+    const [paymentUrl, setPaymentUrl] = useState('https://boletadepago.gestionmsi.gob.ar/siste');
     const [valorMetroCubico, setValorMetroCubico] = useState(VALOR_METRO_CUBICO_DEFAULT);
     const [configDocId, setConfigDocId] = useState(null);
     const [geminiLoading, setGeminiLoading] = useState(false);
@@ -483,6 +484,22 @@ function App() {
         }
         setLoading(false);
     };
+
+    const handleOpenPaymentPage = (data) => {
+        let baseUrl = 'https://boletadepago.gestionmsi.gob.ar/siste';
+        if (data) {
+            const params = new URLSearchParams({
+                tipoRecibo: 'Servicios de Bromatologia',
+                patente: data.patente,
+                importe: data.importe,
+                nombre: data.nombre,
+                comentarios: data.observaciones,
+            });
+            baseUrl += `?${params.toString()}`;
+        }
+        setPaymentUrl(baseUrl);
+        setOpenPaymentModal(true);
+    };
     
     const navigate = (page, vehicleData = null) => {
         if (vehicleData) setSelectedVehicleForApp(vehicleData);
@@ -612,7 +629,7 @@ function App() {
                             onDeleteVehicle={handleDeleteVehicle}
                             navigate={navigate}
                             showSnackbar={showSnackbar}
-                            onOpenPaymentPage={() => setOpenPaymentModal(true)}
+                            onOpenPaymentPage={handleOpenPaymentPage}
                             valorMetroCubico={valorMetroCubico}
                             setGeminiLoading={setGeminiLoading}
                             autoShowAddForm={autoOpenAddForm}
@@ -624,13 +641,13 @@ function App() {
                 </Container>
                 <Box component="footer" sx={{ bgcolor: 'background.paper', p: 3, borderTop: `1px solid ${theme.palette.divider}` }}><Typography variant="body2" color="text.secondary" align="center">&copy; {new Date().getFullYear()} Municipalidad de San Isidro</Typography></Box>
                 <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}><Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">{snackbar.message}</Alert></Snackbar>
-                <Modal open={openPaymentModal} onClose={() => setOpenPaymentModal(false)}>
+                <Modal open={openPaymentModal} onClose={() => { setOpenPaymentModal(false); setPaymentUrl('https://boletadepago.gestionmsi.gob.ar/siste'); }}>
                     <Box sx={{position: 'absolute',top: '50%',left: '50%',transform: 'translate(-50%, -50%)',width: '90%',maxWidth: '800px',height: '80vh',bgcolor: 'background.paper',border: '2px solid #000',boxShadow: 24,p: 0,display: 'flex',flexDirection: 'column',borderRadius: 2,overflow: 'hidden',}}>
                         <Box sx={{display: 'flex',justifyContent: 'space-between',alignItems: 'center',p:1.5,borderBottom: `1px solid ${theme.palette.divider}`,backgroundColor: theme.palette.primary.main,color: 'white'}}>
                             <Typography variant="h6">Generar Boleta</Typography>
                             <IconButton onClick={() => setOpenPaymentModal(false)} color="inherit" size="small"><CloseIcon /></IconButton>
                         </Box>
-                        <iframe src="https://boletadepago.gestionmsi.gob.ar/siste" title="Generador Boleta MSI" style={{ width: '100%', height: '100%', border: 'none', flexGrow: 1 }} />
+                        <iframe src={paymentUrl} title="Generador Boleta MSI" style={{ width: '100%', height: '100%', border: 'none', flexGrow: 1 }} />
                     </Box>
                 </Modal>
             </Box>
