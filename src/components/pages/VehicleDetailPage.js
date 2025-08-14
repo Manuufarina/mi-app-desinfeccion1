@@ -14,6 +14,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is available via useTheme
@@ -67,6 +68,7 @@ const VehicleDetailPage = ({
 
     const {
         ultimaFechaDesinfeccion,
+        fechaVencimiento,
         ultimoReciboPago,
         ultimaUrlRecibo,
         ultimaTransaccionPago,
@@ -81,6 +83,24 @@ const VehicleDetailPage = ({
         if (!isNaN(m3) && !isNaN(valor)) return (m3 * valor).toFixed(2);
         return 'N/A';
     }, [vehicle.metrosCubicos, valorMetroCubico]);
+
+    const thermalReceiptUrl = useMemo(() => {
+        const now = new Date();
+        const venc = fechaVencimiento || new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const params = new URLSearchParams({
+            recibo: ultimoReciboPago || '',
+            titular: vehicle.propietarioNombre || '',
+            doc: '',
+            fecha: now.toLocaleDateString('es-AR'),
+            tasa: 'Tasa: 2105 - OTROS SERV. SANITARIOS',
+            periodo: `${now.getFullYear()} / Cuota: 0000`,
+            monto: montoEstimado,
+            vencimiento: venc.toLocaleDateString('es-AR'),
+            obs: `DESINFECCION MES DE ${now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase()} DOMINIO ${vehicle.patente}`,
+            barcode: ultimoReciboPago || vehicle.patente || ''
+        });
+        return `/recibo-termico.html?${params.toString()}`;
+    }, [fechaVencimiento, montoEstimado, ultimoReciboPago, vehicle]);
 
     useEffect(() => {
         if (showAddDisinfectionForm) {
@@ -223,6 +243,15 @@ const VehicleDetailPage = ({
                         </Button>
                         <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
                             Generar Boleta de Pago
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<ReceiptLongIcon />}
+                            href={thermalReceiptUrl}
+                            target="_blank"
+                        >
+                            Generar recibo para impresora térmica
                         </Button>
                     </>
                 )}
