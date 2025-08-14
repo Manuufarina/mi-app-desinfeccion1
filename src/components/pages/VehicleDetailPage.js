@@ -229,8 +229,20 @@ const VehicleDetailPage = ({
                             variant="outlined"
                             color="primary"
                             startIcon={<ReceiptLongIcon />}
-                            href="/recibo-termico.html"
-                            target="_blank"
+                            onClick={() => {
+                                const today = new Date();
+                                const queryParams = new URLSearchParams({
+                                    reciboId: ultimoReciboPago || 'N/A',
+                                    titular: vehicle.propietarioNombre || 'N/A',
+                                    cuit: vehicle.propietarioCuit || 'N/A',
+                                    fecha: ultimaFechaDesinfeccion ? formatDate(ultimaFechaDesinfeccion) : new Date().toLocaleDateString('es-AR'),
+                                    monto: ultimoMontoPagado || '0.00',
+                                    vencimiento: new Date(today.setDate(today.getDate() + 1)).toLocaleDateString('es-AR'),
+                                    observaciones: ultimasObservaciones || `Desinfección vehículo patente ${vehicle.patente}`,
+                                    barcode: `16500000001002270000000000000500${(ultimoReciboPago || '0').replace(/[^0-9]/g, '').padStart(10, '0')}25089`
+                                });
+                                window.open(`/recibo-termico.html?${queryParams.toString()}`, '_blank');
+                            }}
                         >
                             Generar recibo para impresora térmica
                         </Button>
