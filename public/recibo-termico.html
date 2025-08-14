@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo para Impresora Térmica 58mm</title>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
+
+        /* --- Estilos Generales --- */
+        body {
+            font-family: 'Inconsolata', monospace;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .upload-container {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* --- Contenedor del Recibo --- */
+        .receipt-container {
+            display: flex;
+            width: 380px; /* Ancho para visualización en pantalla */
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* --- Contenido Principal del Recibo --- */
+        .receipt-content {
+            padding: 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* --- Contenedor del código de barras --- */
+        .barcode-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            min-width: 60px; /* Ancho mínimo para el contenedor */
+        }
+
+        .barcode-vertical {
+            transform: rotate(-90deg);
+            transform-origin: top left;
+            display: block;
+        }
+
+        /* --- Estilos de Texto --- */
+        .header, .footer {
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .header p {
+            margin: 2px 0;
+            font-size: 12px;
+        }
+        
+        .item-list, .info-list {
+            margin: 15px 0;
+            font-size: 12px;
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-list li, .item-list li {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .item-list .total {
+            font-weight: 700;
+            border-top: 1px dashed #999;
+            padding-top: 5px;
+            margin-top: 10px;
+        }
+        
+        .label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .value {
+            text-align: right;
+        }
+        
+        hr {
+            border: none;
+            border-top: 1px dashed #999;
+            margin: 15px 0;
+        }
+
+        .footer p {
+            font-size: 10px;
+            margin: 5px 0;
+        }
+
+        /* --- Estilos para la Impresión --- */
+        @media print {
+            body {
+                background-color: #fff;
+                padding: 0;
+            }
+
+            .upload-container, .print-button-container {
+                display: none;
+            }
+
+            .receipt-container {
+                /* Ancho para impresora térmica de 58mm (aprox. 2.28 pulgadas) */
+                /* Se usa un poco menos para márgenes de impresión */
+                width: 56mm; 
+                box-shadow: none;
+                border: none;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .receipt-content {
+                padding: 1mm;
+            }
+
+            .barcode-container {
+                padding: 1mm;
+                min-width: 15mm;
+            }
+
+            /* Ajustar fuentes para la impresión */
+            .header h1 { font-size: 10pt; }
+            .header p { font-size: 7pt; }
+            .info-list, .item-list { font-size: 7pt; }
+            .footer p { font-size: 6pt; }
+        }
+
+        /* --- Botón de Impresión --- */
+        .print-button-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .print-button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .print-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-container">
+        <label for="pdf-upload">Cargar PDF del recibo:</label>
+        <input type="file" id="pdf-upload" accept="application/pdf">
+    </div>
+
+    <div class="receipt-container" id="receipt">
+        <!-- Contenido principal del recibo -->
+        <div class="receipt-content">
+            <div class="header">
+                <h1>MUNICIPALIDAD DE SAN ISIDRO</h1>
+                <p>Recibo Oficial</p>
+            </div>
+
+            <hr>
+
+            <ul class="info-list">
+                <li><span class="label">Recibo:</span> <span class="value" id="receipt-id"></span></li>
+                <li><span class="label">Titular:</span> <span class="value" id="holder-name"></span></li>
+                <li><span class="label">DNI/CUIT:</span> <span class="value" id="holder-id"></span></li>
+                <li><span class="label">Fecha:</span> <span class="value" id="receipt-date"></span></li>
+            </ul>
+
+            <hr>
+
+            <ul class="item-list">
+                <li>
+                    <span id="tasa-desc"></span>
+                    <span class="value" id="item-amount"></span>
+                </li>
+                <li>
+                    <span id="periodo"></span>
+                    <span class="value"></span>
+                </li>
+                <li class="total">
+                    <span>TOTAL A PAGAR</span>
+                    <span class="value" id="total-amount"></span>
+                </li>
+            </ul>
+
+            <hr>
+
+            <div class="footer">
+                <p><span class="label">Vencimiento:</span> <span id="vencimiento"></span></p>
+                <p><strong>Observaciones:</strong></p>
+                <p id="observaciones"></p>
+                <p>UNICAMENTE PARA SER ABONADO EN TESORERIA MUNICIPAL</p>
+            </div>
+        </div>
+        
+        <!-- Contenedor del código de barras vertical -->
+        <div class="barcode-container">
+            <div id="barcode"></div>
+        </div>
+    </div>
+
+    <div class="print-button-container">
+        <button class="print-button" onclick="window.print()">Imprimir Recibo</button>
+    </div>
+
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.standardFontDataUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/';
+        } else {
+            console.error('pdf.js no se pudo cargar');
+        }
+
+        async function renderBarcodeFromPage(page, content) {
+            const viewport = page.getViewport({ scale: 1 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            const barcodeItem = content.items.find(it => /\b\d{30,}\b/.test(it.str));
+            if (!barcodeItem) return;
+
+            const tx = pdfjsLib.Util.transform(viewport.transform, barcodeItem.transform);
+            const textWidth = barcodeItem.width * viewport.scale;
+            const textHeight = barcodeItem.height * viewport.scale;
+            let x = tx[4];
+            let yTop = tx[5] - textHeight;
+            x = Math.max(0, x - 5);
+            const width = Math.min(canvas.width - x, textWidth + 10);
+
+            const scanData = ctx.getImageData(x, 0, width, yTop);
+            const { data, width: w, height: h } = scanData;
+            const rowWhite = (r) => {
+                for (let c = 0; c < w; c++) {
+                    const idx = (r * w + c) * 4;
+                    if (data[idx] !== 255 || data[idx + 1] !== 255 || data[idx + 2] !== 255) return false;
+                }
+                return true;
+            };
+            let row = h - 1;
+            while (row >= 0 && rowWhite(row)) row--;
+            const bottom = row;
+            while (row >= 0 && !rowWhite(row)) row--;
+            const top = row + 1;
+            const barHeight = bottom - top + 1;
+            const barData = ctx.getImageData(x, top, width, barHeight);
+            const barCanvas = document.createElement('canvas');
+            barCanvas.width = width;
+            barCanvas.height = barHeight;
+            barCanvas.getContext('2d').putImageData(barData, 0, 0);
+
+            const img = new Image();
+            img.src = barCanvas.toDataURL();
+            img.className = 'barcode-vertical';
+            const container = document.getElementById('barcode');
+            container.innerHTML = '';
+            container.appendChild(img);
+        }
+
+        async function loadFromPdf(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                if (!window.pdfjsLib) throw new Error('pdf.js no cargado');
+                const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let text = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += ' ' + content.items.map(it => it.str).join(' ');
+                    if (i === 1) await renderBarcodeFromPage(page, content);
+                }
+
+                const receiptMatch = text.match(/Recibo[:\s]*([\d-]+)/i);
+                if (receiptMatch) document.getElementById('receipt-id').textContent = receiptMatch[1];
+
+                const titularMatch = text.match(/Titular[:\s]*([A-ZÁÉÍÓÚÑ\s]+?)(?:DNI|CUIT)/i);
+                if (titularMatch) document.getElementById('holder-name').textContent = titularMatch[1].trim();
+
+                const docMatch = text.match(/(?:DNI|CUIT)[:\s]*([\d]+)/i);
+                if (docMatch) document.getElementById('holder-id').textContent = docMatch[1];
+
+                const fechaMatch = text.match(/Fecha[:\s]*([0-9\/]+)/i);
+                if (fechaMatch) document.getElementById('receipt-date').textContent = fechaMatch[1];
+
+                const tasaMatch = text.match(/Tasa[:\s]*([^$]+?)\s+Periodo/i);
+                if (tasaMatch) document.getElementById('tasa-desc').textContent = tasaMatch[1].trim();
+
+                const periodoMatch = text.match(/Periodo[:\s]*([0-9\/]+)\s*Cuota[:\s]*([0-9]+)/i);
+                if (periodoMatch) {
+                    document.getElementById('periodo').textContent = `Periodo: ${periodoMatch[1]} / Cuota: ${periodoMatch[2]}`;
+                }
+
+                const montoMatch = text.match(/TOTAL\s*A\s*PAGAR\s*\$?\s*([\d.,]+)/i);
+                if (montoMatch) {
+                    const monto = montoMatch[1].replace('.', '').replace(',', '.');
+                    document.getElementById('item-amount').textContent = `$ ${monto}`;
+                    document.getElementById('total-amount').textContent = `$ ${monto}`;
+                }
+
+                const vencMatch = text.match(/Vencimiento[:\s]*([0-9\/]+)/i);
+                if (vencMatch) document.getElementById('vencimiento').textContent = vencMatch[1];
+
+                const obsMatch = text.match(/Observaciones[:\s]*([\s\S]+?)(?:\d{20,}|UNICAMENTE|$)/i);
+                if (obsMatch) document.getElementById('observaciones').textContent = obsMatch[1].trim();
+
+            } catch (err) {
+                console.error('No se pudo leer el PDF', err);
+                alert('No se pudo leer el PDF del recibo.');
+            }
+        }
+
+        function loadFromParams() {
+            const params = new URLSearchParams(window.location.search);
+            const get = (key, def = '') => params.get(key) || def;
+
+            document.getElementById('receipt-id').textContent = get('recibo');
+            document.getElementById('holder-name').textContent = get('titular');
+            document.getElementById('holder-id').textContent = get('doc');
+            document.getElementById('receipt-date').textContent = get('fecha');
+
+            document.getElementById('tasa-desc').textContent = get('tasa', 'Tasa: 2105 - OTROS SERV. SANITARIOS');
+            const monto = get('monto');
+            document.getElementById('item-amount').textContent = monto ? `$ ${monto}` : '';
+            document.getElementById('periodo').textContent = get('periodo');
+            document.getElementById('total-amount').textContent = monto ? `$ ${monto}` : '';
+
+            document.getElementById('vencimiento').textContent = get('vencimiento');
+            document.getElementById('observaciones').textContent = get('obs');
+
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromParams();
+            document.getElementById('pdf-upload').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) loadFromPdf(file);
+            });
+        });
+    </script>
+
+</body>
+</html>

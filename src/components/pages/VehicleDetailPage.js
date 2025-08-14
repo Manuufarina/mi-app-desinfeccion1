@@ -14,6 +14,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is available via useTheme
@@ -67,6 +68,7 @@ const VehicleDetailPage = ({
 
     const {
         ultimaFechaDesinfeccion,
+        fechaVencimiento,
         ultimoReciboPago,
         ultimaUrlRecibo,
         ultimaTransaccionPago,
@@ -81,6 +83,7 @@ const VehicleDetailPage = ({
         if (!isNaN(m3) && !isNaN(valor)) return (m3 * valor).toFixed(2);
         return 'N/A';
     }, [vehicle.metrosCubicos, valorMetroCubico]);
+
 
     useEffect(() => {
         if (showAddDisinfectionForm) {
@@ -192,6 +195,24 @@ const VehicleDetailPage = ({
         return new Date(timestamp).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
+    const formatDateParam = (timestamp) => {
+        if (!timestamp) return '';
+        const date = timestamp && typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
+        return date.toLocaleDateString('es-AR');
+    };
+
+    const thermalReceiptUrl = useMemo(() => {
+        const params = new URLSearchParams({
+            recibo: ultimoReciboPago || '',
+            titular: vehicle.propietarioNombre || '',
+            fecha: formatDateParam(ultimaFechaDesinfeccion),
+            monto: ultimoMontoPagado ? parseFloat(ultimoMontoPagado).toFixed(2) : '',
+            vencimiento: formatDateParam(fechaVencimiento),
+            obs: ultimasObservaciones || '',
+        });
+        return `/recibo-termico.html?${params.toString()}`;
+    }, [ultimoReciboPago, vehicle.propietarioNombre, ultimaFechaDesinfeccion, ultimoMontoPagado, fechaVencimiento, ultimasObservaciones]);
+
     return (
         <StyledPaper>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -223,6 +244,15 @@ const VehicleDetailPage = ({
                         </Button>
                         <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
                             Generar Boleta de Pago
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<ReceiptLongIcon />}
+                            href={thermalReceiptUrl}
+                            target="_blank"
+                        >
+                            Generar recibo para impresora térmica
                         </Button>
                     </>
                 )}
