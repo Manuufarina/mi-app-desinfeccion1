@@ -14,6 +14,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 // import { styled, useTheme } from '@mui/material/styles'; // useTheme is used, styled for StyledPaper is imported
 import { useTheme } from '@mui/material/styles';
 import { StyledPaper } from '../../theme'; // Import StyledPaper, theme is available via useTheme
@@ -223,6 +224,15 @@ const VehicleDetailPage = ({
                         </Button>
                         <Button variant="outlined" color="primary" startIcon={<PaymentIcon />} onClick={onOpenPaymentPage}>
                             Generar Boleta de Pago
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<ReceiptLongIcon />}
+                            href="/recibo-termico.html"
+                            target="_blank"
+                        >
+                            Generar recibo para impresora térmica
                         </Button>
                     </>
                 )}
