@@ -402,7 +402,12 @@ const VehicleDetailPage = ({
                             <TextField label="Recibo" value={editRecord.recibo} onChange={(e)=>setEditRecord({...editRecord,recibo:e.target.value})} fullWidth margin="dense" />
                             <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={{mt:1}}>
                                 Subir Boleta (PDF/Imagen)
-                                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, setEditReciboFile)} />
+                                <input
+                                    type="file"
+                                    hidden
+                                    accept="application/pdf,image/*"
+                                    onChange={(e) => handleFileChange(e, setEditReciboFile)}
+                                />
                             </Button>
                             {editReciboFile && <Typography variant="caption" display="block" sx={{mt:0.5}}>{editReciboFile.name}</Typography>}
                             <TextField label="Transacción" value={editRecord.transaccion || ''} onChange={(e)=>setEditRecord({...editRecord,transaccion:e.target.value})} fullWidth margin="dense" />
