@@ -16,6 +16,7 @@ import PersonIcon from '@mui/icons-material/Person';
 // import Paper from '@mui/material/Paper'; // StyledPaper is imported
 import { StyledPaper, theme, TIPOS_VEHICULO } from '../../theme'; // Import from theme
 import { exportDisinfectionsToExcel } from '../../services/excelExportService';
+import { uploadFiscalesFromCSV } from '../../services/firestoreService';
 
 // const StyledPaper = styled(Paper)(({ theme }) => ({ // Imported from theme
 //     padding: theme.spacing(3), marginTop: theme.spacing(2), marginBottom: theme.spacing(2),
@@ -48,6 +49,7 @@ const AdminPage = ({
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [newRole, setNewRole] = useState('admin');
+    const [csvFile, setCsvFile] = useState(null);
 
     useEffect(() => {
         setNuevoValorM3(valorMetroCubico);
@@ -73,6 +75,21 @@ const AdminPage = ({
         setNewUsername('');
         setNewPassword('');
         setNewRole('admin');
+    };
+
+    const handleCsvChange = (e) => {
+        setCsvFile(e.target.files[0] || null);
+    };
+
+    const handleUploadFiscales = async () => {
+        if (!csvFile) return;
+        try {
+            await uploadFiscalesFromCSV(csvFile);
+            setCsvFile(null);
+        } catch (err) {
+            console.error('Error en carga:', err);
+            alert('Error en carga: ' + (err.message || err));
+        }
     };
 
     return (
@@ -163,6 +180,14 @@ const AdminPage = ({
                             </Select>
                         </FormControl>
                         <Button variant="contained" onClick={handleCreateUser}>Agregar</Button>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                        <Button variant="outlined" component="label">
+                            Seleccionar CSV
+                            <input hidden type="file" accept=".csv" onChange={handleCsvChange} />
+                        </Button>
+                        {csvFile && <Typography variant="body2">{csvFile.name}</Typography>}
+                        <Button variant="contained" onClick={handleUploadFiscales} disabled={!csvFile}>Importar Fiscales</Button>
                     </Box>
                     <List dense>
                         {adminUsers && adminUsers.map(u => (

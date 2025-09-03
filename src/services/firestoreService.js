@@ -321,3 +321,25 @@ export const fetchLogs = (logsCollectionPath, callback) => {
     });
 };
 
+export const uploadFiscalesFromCSV = async (csvFile) => {
+    if (!csvFile) {
+        throw new Error('Archivo CSV no proporcionado.');
+    }
+
+    const csv = await csvFile.text();
+    const response = await fetch('https://us-central1-fiscalizacion-san-isidro.cloudfunctions.net/createUsersFromCSV', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ csv })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error en carga');
+    }
+
+    return response.json().catch(() => undefined);
+};
+
