@@ -197,7 +197,7 @@ export const handleDeleteVehicle = async (vehiclesCollectionPath, vehicleId) => 
     await deleteDoc(doc(db, vehiclesCollectionPath, vehicleId));
 };
 
-export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId, fechaRegistroMillis, updatedFields) => {
+export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId, fechaRegistroMillis, updatedFields, reciboFile, appId) => {
     const vehicleRef = doc(db, vehiclesCollectionPath, vehicleId);
     const snap = await getDoc(vehicleRef);
     if (!snap.exists()) throw new Error('Vehículo no encontrado.');
@@ -220,7 +220,15 @@ export const handleUpdateDisinfection = async (vehiclesCollectionPath, vehicleId
             throw new Error('Ya existe una desinfección registrada para este mes.');
         }
     }
-    historial[index] = { ...historial[index], ...updatedFields };
+    const updatedRecord = { ...historial[index], ...updatedFields };
+    if (reciboFile) {
+        const timestamp = Date.now();
+        const reciboPath = `recibos/${appId}/${vehicleId}/${timestamp}_${reciboFile.name}`;
+        const urlRecibo = await uploadFileToStorage(reciboFile, reciboPath);
+        updatedRecord.urlRecibo = urlRecibo;
+        updatedRecord.nombreArchivoRecibo = reciboFile.name;
+    }
+    historial[index] = updatedRecord;
     const sorted = [...historial].sort((a,b) => b.fecha.toMillis() - a.fecha.toMillis());
     const ultima = sorted[0] || {};
     const diasVigencia = DIAS_VIGENCIA_TIPO[vehicle.tipoVehiculo] || 30;
