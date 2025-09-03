@@ -55,9 +55,11 @@ const VehicleDetailPage = ({
     const [disinfectionDataToSubmit, setDisinfectionDataToSubmit] = useState(null);
     const [openSummaryDialog, setOpenSummaryDialog] = useState(false);
     const [historySummary, setHistorySummary] = useState('');
+    const [editReciboFile, setEditReciboFile] = useState(null);
     const [editRecord, setEditRecord] = useState(null);
     const [openDeleteDialog, setOpenDeleteDialog] = useState(null);
     const [openDeleteVehicleDialog, setOpenDeleteVehicleDialog] = useState(false);
+    const [savingEdit, setSavingEdit] = useState(false);
 
     useEffect(() => {
         if (autoShowAddForm) {
@@ -278,8 +280,8 @@ const VehicleDetailPage = ({
                         </Grid>
                         <Grid item xs={12} sm={4}>
                             <Button variant="outlined" component="label" fullWidth startIcon={<CloudUploadIcon />} sx={{mt: {xs:0, sm:1}}}>
-                                Foto Recibo
-                                <input type="file" hidden accept="image/*" capture="environment" onChange={(e) => handleFileChange(e, setReciboFile)} />
+                                Recibo (Foto/PDF)
+                                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, setReciboFile)} />
                             </Button>
                             {reciboFile && <Typography variant="caption" display="block" sx={{mt:0.5, textAlign:'center'}}>{reciboFile.name}</Typography>}
                         </Grid>
@@ -291,8 +293,8 @@ const VehicleDetailPage = ({
                         </Grid>
                         <Grid item xs={12} sm={4}>
                              <Button variant="outlined" component="label" fullWidth startIcon={<CloudUploadIcon />} sx={{mt: {xs:0, sm:1}}}>
-                                Foto Trans.
-                                <input type="file" hidden accept="image/*" capture="environment" onChange={(e) => handleFileChange(e, setTransaccionFile)} />
+                                Comprobante (Foto/PDF)
+                                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, setTransaccionFile)} />
                             </Button>
                             {transaccionFile && <Typography variant="caption" display="block" sx={{mt:0.5, textAlign:'center'}}>{transaccionFile.name}</Typography>}
                         </Grid>
@@ -399,13 +401,45 @@ const VehicleDetailPage = ({
                                 InputLabelProps={{ shrink: true }}
                             />
                             <TextField label="Recibo" value={editRecord.recibo} onChange={(e)=>setEditRecord({...editRecord,recibo:e.target.value})} fullWidth margin="dense" />
+                            <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} sx={{mt:1}}>
+                                Subir Boleta (PDF/Imagen)
+                                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, setEditReciboFile)} />
+                            </Button>
+                            {editReciboFile && <Typography variant="caption" display="block" sx={{mt:0.5}}>{editReciboFile.name}</Typography>}
                             <TextField label="Transacción" value={editRecord.transaccion || ''} onChange={(e)=>setEditRecord({...editRecord,transaccion:e.target.value})} fullWidth margin="dense" />
                             <TextField label="Monto Pagado" type="number" value={editRecord.montoPagado} onChange={(e)=>setEditRecord({...editRecord,montoPagado:e.target.value})} fullWidth margin="dense" />
                             <TextField label="Observaciones" value={editRecord.observaciones || ''} onChange={(e)=>setEditRecord({...editRecord,observaciones:e.target.value})} fullWidth multiline rows={3} margin="dense" />
                         </DialogContent>
                         <DialogActions>
-                            <Button onClick={() => setEditRecord(null)}>Cancelar</Button>
-                            <Button onClick={() => { onUpdateDisinfection(vehicle.id, editRecord.fechaRegistro.toMillis(), { fecha: editRecord.fecha instanceof Date ? Timestamp.fromDate(editRecord.fecha) : editRecord.fecha, recibo: editRecord.recibo, transaccion: editRecord.transaccion || '', montoPagado: parseFloat(editRecord.montoPagado) || 0, observaciones: editRecord.observaciones || '' }); setEditRecord(null); }} color="primary">Guardar</Button>
+                            <Button onClick={() => { setEditRecord(null); setEditReciboFile(null); }}>Cancelar</Button>
+                            <Button
+                                onClick={async () => {
+                                    setSavingEdit(true);
+                                    try {
+                                        await onUpdateDisinfection(
+                                            vehicle.id,
+                                            editRecord.fechaRegistro.toMillis(),
+                                            {
+                                                fecha: editRecord.fecha instanceof Date ? Timestamp.fromDate(editRecord.fecha) : editRecord.fecha,
+                                                recibo: editRecord.recibo,
+                                                transaccion: editRecord.transaccion || '',
+                                                montoPagado: parseFloat(editRecord.montoPagado) || 0,
+                                                observaciones: editRecord.observaciones || ''
+                                            },
+                                            editReciboFile
+                                        );
+                                        setEditRecord(null);
+                                        setEditReciboFile(null);
+                                    } catch (e) {
+                                        showSnackbar(e.message || 'Error al actualizar registro.', 'error');
+                                    }
+                                    setSavingEdit(false);
+                                }}
+                                color="primary"
+                                disabled={savingEdit}
+                            >
+                                Guardar
+                            </Button>
                         </DialogActions>
                     </>
                 )}
