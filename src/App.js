@@ -454,11 +454,11 @@ function App() {
         setLoading(false);
     };
 
-    const handleUpdateDisinfection = async (vehicleId, fechaRegistroMillis, data) => {
+    const handleUpdateDisinfection = async (vehicleId, fechaRegistroMillis, data, reciboFile) => {
         if (!currentUser) { showSnackbar("Debe estar autenticado.", "error"); return; }
         setLoading(true);
         try {
-            const updated = await updateDisinfectionService(vehiclesCollectionPath, vehicleId, fechaRegistroMillis, data);
+            const updated = await updateDisinfectionService(vehiclesCollectionPath, vehicleId, fechaRegistroMillis, data, reciboFile, appId);
             setSelectedVehicleForApp(updated);
             showSnackbar("Registro actualizado.", "success");
             await addLogEntryService(logsCollectionPath, currentUser.uid, 'Edición desinfección', `Vehículo ${vehicleId}`);
